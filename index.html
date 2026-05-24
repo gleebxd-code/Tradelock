@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tradinglock</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .tab-active { border-bottom: 2px solid #059669; color: #059669; font-weight: bold; }
+        .tab-inactive { border-bottom: 2px solid transparent; color: #64748b; }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans text-slate-800">
+
+    <div id="landing-screen" class="min-h-screen flex items-center justify-center p-4">
+        <div class="max-w-md w-full bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center">
+            <h1 class="text-3xl font-black tracking-tighter text-slate-900 mb-2">TRADINGLOCK</h1>
+            <p class="text-sm text-slate-500 mb-8">Discipline equals freedom. Log your executions.</p>
+            <div class="space-y-3">
+                <button onclick="showScreen('auth-login')" class="w-full bg-slate-900 text-white font-bold py-3 rounded-lg hover:bg-slate-800 transition-colors">Log In</button>
+                <button onclick="showScreen('auth-signup')" class="w-full bg-white border-2 border-slate-200 text-slate-700 font-bold py-3 rounded-lg hover:border-slate-300 transition-colors">Create Account</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="auth-signup" class="hidden min-h-screen flex items-center justify-center p-4">
+        <div class="max-w-md w-full bg-white rounded-xl shadow-sm border border-slate-200 p-8">
+            <button type="button" onclick="showScreen('landing-screen')" class="text-xs font-bold text-slate-400 hover:text-slate-700 mb-6 uppercase tracking-wider">← Back</button>
+            <h2 class="text-2xl font-black mb-6">Sign Up</h2>
+            <form id="signup-form" onsubmit="handleSignup(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Username</label>
+                    <input type="text" id="reg-username" required class="w-full p-3 border rounded-lg bg-slate-50">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Age (Must be 18+)</label>
+                    <input type="number" id="reg-age" min="18" required class="w-full p-3 border rounded-lg bg-slate-50">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Email</label>
+                    <input type="email" id="reg-email" required class="w-full p-3 border rounded-lg bg-slate-50">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Password</label>
+                    <input type="password" id="reg-password" required minlength="6" class="w-full p-3 border rounded-lg bg-slate-50">
+                </div>
+                <button type="submit" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-lg hover:bg-emerald-700 mt-2">Register & Enter</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="auth-login" class="hidden min-h-screen flex items-center justify-center p-4">
+        <div class="max-w-md w-full bg-white rounded-xl shadow-sm border border-slate-200 p-8">
+            <button type="button" onclick="showScreen('landing-screen')" class="text-xs font-bold text-slate-400 hover:text-slate-700 mb-6 uppercase tracking-wider">← Back</button>
+            <h2 class="text-2xl font-black mb-6">Log In</h2>
+            <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Email</label>
+                    <input type="email" id="login-email" required class="w-full p-3 border rounded-lg bg-slate-50">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Password</label>
+                    <input type="password" id="login-password" required class="w-full p-3 border rounded-lg bg-slate-50">
+                </div>
+                <button type="submit" class="w-full bg-slate-900 text-white font-bold py-3 rounded-lg hover:bg-slate-800 mt-2">Continue</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="auth-verify" class="hidden min-h-screen flex items-center justify-center p-4">
+        <div class="max-w-md w-full bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center">
+            <h2 class="text-2xl font-black mb-2">Check Your Email</h2>
+            <p class="text-sm text-slate-500 mb-6">We sent a 6-digit code to your inbox.</p>
+            <form id="verify-form" onsubmit="handleVerify(event)" class="space-y-4">
+                <input type="text" id="verify-code" placeholder="000000" maxlength="6" required class="w-full p-4 text-center text-2xl tracking-widest font-mono border rounded-lg bg-slate-50">
+                <button type="submit" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-lg hover:bg-emerald-700">Verify & Enter</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="main-app" class="hidden min-h-screen flex flex-col">
+        <header class="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center sticky top-0 z-10">
+            <div class="flex items-baseline">
+                <h1 class="text-xl font-black tracking-tighter text-slate-900">TRADINGLOCK</h1>
+                <span class="text-[10px] font-mono text-slate-400 ml-2 tracking-widest">input=output</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <span id="user-display" class="text-sm font-bold text-slate-500">@user</span>
+                <button onclick="logout()" class="text-xs font-bold text-red-500 hover:text-red-700 bg-red-50 px-3 py-1.5 rounded">Log Out</button>
+            </div>
+        </header>
+
+        <div class="bg-white px-6 border-b border-slate-200">
+            <div class="flex gap-6 overflow-x-auto">
+                <button id="tab-info" onclick="switchTab('info')" class="tab-active pb-3 text-sm transition-colors">Home</button>
+                <button id="tab-home" onclick="switchTab('home')" class="tab-inactive pb-3 text-sm transition-colors hover:text-slate-800">Dashboard</button>
+                <button id="tab-journal" onclick="switchTab('journal')" class="tab-inactive pb-3 text-sm transition-colors hover:text-slate-800">New Entry</button>
+                <button id="tab-calendar" onclick="switchTab('calendar')" class="tab-inactive pb-3 text-sm transition-colors hover:text-slate-800">Calendar</button>
+                <button id="tab-rules" onclick="switchTab('rules')" class="tab-inactive pb-3 text-sm transition-colors hover:text-slate-800">Account</button>
+            </div>
+        </div>
+
+        <main class="flex-1 max-w-6xl w-full mx-auto p-6">
+
+            <div id="view-info" class="space-y-6">
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-8 md:p-12 text-center">
+                    <h2 class="text-3xl md:text-4xl font-black text-slate-900 mb-4 tracking-tighter">Welcome to TRADINGLOCK</h2>
+                    <p class="text-slate-500 mb-10 max-w-2xl mx-auto leading-relaxed text-sm md:text-base">
+                        Discipline equals freedom. This platform is designed to eliminate emotional trading by forcing you to define your rules, track your strict confluences, and respect your risk parameters. Input equals output.
+                    </p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+                        <div class="p-6 bg-slate-50 border border-slate-100 rounded-xl hover:border-slate-200 transition-colors">
+                            <div class="w-10 h-10 bg-slate-900 text-white rounded-lg flex items-center justify-center font-black mb-4">1</div>
+                            <h3 class="font-bold text-slate-800 mb-2">Define Your Rules</h3>
+                            <p class="text-xs text-slate-500 leading-relaxed">Use your Dashboard to literally lock in your strict trading rules and prop firm risk parameters. Once locked, they cannot be changed mid-session.</p>
+                        </div>
+                        <div class="p-6 bg-slate-50 border border-slate-100 rounded-xl hover:border-slate-200 transition-colors">
+                            <div class="w-10 h-10 bg-emerald-600 text-white rounded-lg flex items-center justify-center font-black mb-4">2</div>
+                            <h3 class="font-bold text-slate-800 mb-2">Log Executions</h3>
+                            <p class="text-xs text-slate-500 leading-relaxed">Navigate to New Entry to log every trade. Grade your setups A++ to F based strictly on your pre-defined checklist, removing all emotion.</p>
+                        </div>
+                        <div class="p-6 bg-slate-50 border border-slate-100 rounded-xl hover:border-slate-200 transition-colors">
+                            <div class="w-10 h-10 bg-blue-600 text-white rounded-lg flex items-center justify-center font-black mb-4">3</div>
+                            <h3 class="font-bold text-slate-800 mb-2">Track Performance</h3>
+                            <p class="text-xs text-slate-500 leading-relaxed">Review your execution history and visualize your consistency on the Calendar. Export your data anytime to analyze your true edge.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="view-home" class="hidden space-y-6">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-1">Win Rate</span>
+                        <span id="stat-winrate" class="text-3xl font-black text-slate-800">0%</span>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-1">Net PnL</span>
+                        <span id="stat-pnl" class="text-3xl font-black text-slate-800">$0.00</span>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm md:col-span-2 flex items-center justify-between">
+                        <div>
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-1">Prop Firm Status</span>
+                            <div class="flex items-center gap-2">
+                                <input type="text" id="prop-size" placeholder="e.g. $50k" class="text-xl font-black text-slate-800 w-24 bg-transparent focus:outline-none border-b border-dashed border-slate-300">
+                                <select id="prop-status" class="text-sm font-bold bg-slate-100 p-1 rounded text-slate-600 focus:outline-none">
+                                    <option>Phase 1</option><option>Phase 2</option><option>Funded</option><option>Blown</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button onclick="exportCSV()" class="bg-slate-900 text-white text-xs font-bold px-4 py-2 rounded shadow hover:bg-slate-800">Export CSV</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                        <div class="flex justify-between items-end mb-3">
+                            <h3 class="text-lg font-black text-slate-800">STRICT TRADING RULES</h3>
+                            <button id="toggle-rules-btn" type="button" onclick="toggleRulesEdit()" class="text-xs font-bold text-slate-400 hover:text-slate-800 transition-colors">[ Unlock ]</button>
+                        </div>
+                        <textarea id="trading-rules" class="w-full h-40 p-4 text-sm border border-slate-200 rounded-lg bg-slate-50 text-slate-700 focus:outline-none transition-all leading-relaxed resize-none" readonly placeholder="1. Wait for setup...&#10;2. Manage risk...&#10;3. Execute without hesitation."></textarea>
+                    </div>
+
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                        <div class="flex justify-between items-end mb-3">
+                            <h3 class="text-lg font-black text-red-600">RISK PARAMETERS</h3>
+                            <button id="toggle-risk-btn" type="button" onclick="toggleRiskEdit()" class="text-xs font-bold text-slate-400 hover:text-red-600 transition-colors">[ Unlock ]</button>
+                        </div>
+                        <textarea id="risk-parameters" class="w-full h-40 p-4 text-sm border border-slate-200 rounded-lg bg-slate-50 text-slate-700 focus:outline-none transition-all leading-relaxed resize-none" readonly placeholder="- Max Daily Loss: $2,500&#10;- Max Total Drawdown: $5,000&#10;- Max Risk Per Trade: 1%&#10;- Daily Trade Limit: 3 Trades"></textarea>
+                    </div>
+                </div>
+
+                <div>
+                    <h2 class="text-lg font-black text-slate-800 mb-4">Execution History</h2>
+                    <div id="history-container" class="space-y-4">
+                        </div>
+                </div>
+            </div>
+
+            <div id="view-journal" class="hidden grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="md:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                    <h2 class="text-lg font-black text-slate-800 mb-6 border-b pb-2">Log Execution</h2>
+                    <form id="trade-form" onsubmit="saveTradeEntry(event)" class="space-y-5">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Date</label>
+                                <input type="date" id="trade-date" class="w-full p-2 border rounded-md text-sm bg-slate-50" required>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Time of Entry</label>
+                                <input type="time" id="trade-time" class="w-full p-2 border rounded-md text-sm bg-slate-50" required>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Asset</label>
+                                <input type="text" id="trade-asset" placeholder="NQ, EURUSD" class="w-full p-2 border rounded-md text-sm uppercase" required>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Direction</label>
+                                <select id="trade-direction" class="w-full p-2 border rounded-md text-sm bg-white" required>
+                                    <option value="LONG">Long</option><option value="SHORT">Short</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">R:R (Risk:Reward)</label>
+                                <input type="text" id="trade-rr" placeholder="e.g. 1:3" class="w-full p-2 border rounded-md text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Outcome</label>
+                                <select id="trade-outcome" class="w-full p-2 border rounded-md text-sm bg-white" required>
+                                    <option value="WIN">Win</option><option value="LOSS">Loss</option><option value="BE">Break Even</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="md:col-span-1">
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Gross PnL ($)</label>
+                                <input type="number" id="trade-pnl" step="0.01" placeholder="-50.00" class="w-full p-2 border rounded-md text-sm" required>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-xs font-bold text-slate-500 mb-1 flex justify-between">
+                                    <span>System Checklist</span>
+                                    <span id="grade-badge" class="text-slate-400">-</span>
+                                </label>
+                                <div id="active-checklist" class="grid grid-cols-2 gap-2 bg-slate-50 p-2 rounded border border-slate-200 max-h-32 overflow-y-auto">
+                                    </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Context / Why did you take this?</label>
+                                <textarea id="trade-context" class="w-full p-2 border rounded-md text-sm h-20 bg-slate-50" required></textarea>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 mb-1 text-red-500">Mistakes Made</label>
+                                    <textarea id="trade-mistakes" class="w-full p-2 border border-red-200 rounded-md text-sm h-16 bg-red-50 placeholder-red-300" placeholder="FOMO, moved stop, etc..."></textarea>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-500 mb-1 text-emerald-500">Rule Compliance</label>
+                                    <textarea id="trade-compliance" class="w-full p-2 border border-emerald-200 rounded-md text-sm h-16 bg-emerald-50 placeholder-emerald-300" placeholder="Followed plan perfectly..."></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1">Chart Screenshot (Optional)</label>
+                            <input type="file" accept="image/*" onchange="previewImage(event)" class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-xs file:font-bold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200">
+                            <img id="screenshot-preview" class="hidden mt-2 max-h-40 rounded border object-cover">
+                        </div>
+
+                        <button type="submit" class="w-full bg-slate-900 text-white font-black py-4 rounded-lg hover:bg-slate-800 transition-colors shadow-md">LOCK EXECUTION</button>
+                    </form>
+                </div>
+
+                <div class="space-y-6">
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+                        <h3 class="text-sm font-bold text-slate-800 mb-1">Setup Confluences</h3>
+                        <p class="text-[10px] text-slate-400 mb-4 leading-tight">These drive your execution grade. A++ requires all boxes checked.</p>
+                        
+                        <div class="flex gap-2 mb-4">
+                            <input type="text" id="new-confluence-input" placeholder="e.g. 15m CHoCH" class="flex-1 p-2 border rounded text-xs">
+                            <button type="button" onclick="addConfluenceItem()" class="bg-emerald-600 text-white px-3 py-1 rounded text-xs font-bold">+</button>
+                        </div>
+                        <div id="config-checklist" class="space-y-1 max-h-48 overflow-y-auto pr-1">
+                            </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-calendar" class="hidden">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                    <div><span class="block text-[10px] uppercase text-slate-400 font-bold mb-1">Month Trades</span><span id="cal-month-trades" class="text-xl font-black text-slate-700">0</span></div>
+                    <div><span class="block text-[10px] uppercase text-slate-400 font-bold mb-1">Month Winrate</span><span id="cal-month-winrate" class="text-xl font-black text-slate-700">0%</span></div>
+                    <div><span class="block text-[10px] uppercase text-slate-400 font-bold mb-1">All-Time Trades</span><span id="cal-all-trades" class="text-xl font-black text-slate-700">0</span></div>
+                    <div><span class="block text-[10px] uppercase text-slate-400 font-bold mb-1">All-Time Winrate</span><span id="cal-all-winrate" class="text-xl font-black text-slate-700">0%</span></div>
+                </div>
+
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-black text-slate-800" id="calendar-month-label">Month Year</h2>
+                        <div class="flex gap-2">
+                            <button onclick="changeMonth(-1)" class="p-2 bg-slate-100 rounded hover:bg-slate-200 text-sm font-bold">← Prev</button>
+                            <button onclick="changeMonth(1)" class="p-2 bg-slate-100 rounded hover:bg-slate-200 text-sm font-bold">Next →</button>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-7 gap-2 mb-2 text-center text-xs font-bold text-slate-400 uppercase tracking-wider">
+                        <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+                    </div>
+                    <div id="calendar-grid-content" class="grid grid-cols-7 gap-2">
+                        </div>
+                </div>
+            </div>
+
+            <div id="view-rules" class="hidden">
+                <div class="max-w-xl bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                    <h2 class="text-lg font-black text-slate-800 mb-6 border-b pb-2">Account Settings</h2>
+                    <form onsubmit="handleAccountUpdate(event)" class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1">Username</label>
+                            <input type="text" id="acc-username" class="w-full p-2 border rounded text-sm bg-slate-50">
+                        </div>
+                        <hr class="my-4 border-slate-100">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1">Old Password (Required to change pass)</label>
+                            <input type="password" id="acc-old-pass" class="w-full p-2 border rounded text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1">New Password</label>
+                            <input type="password" id="acc-new-pass" minlength="6" class="w-full p-2 border rounded text-sm">
+                        </div>
+                        <button type="submit" class="w-full bg-slate-900 text-white font-bold py-2 rounded mt-2 hover:bg-slate-800">Update Profile</button>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // --- SAFE STORAGE WRAPPERS (Safari local file bypass) ---
+        function getStorage(key, defaultValue) {
+            try { 
+                const data = JSON.parse(localStorage.getItem(key));
+                return data !== null ? data : defaultValue;
+            } catch (e) { return defaultValue; }
+        }
+        function setStorage(key, value) {
+            try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
+        }
+        function getSession() { try { return localStorage.getItem('tl_active_session'); } catch(e) { return null; } }
+        function setSession(val) { try { localStorage.setItem('tl_active_session', val); } catch(e) {} }
+        function clearSession() { try { localStorage.removeItem('tl_active_session'); } catch(e) {} }
+
+        // --- GLOBAL VARIABLES ---
+        let dbUsers = getStorage('tl_global_users', []);
+        if (!Array.isArray(dbUsers)) dbUsers = []; 
+
+        let activeUser = null; 
+        let activeCode = null; 
+        let tempLoginEmail = null; 
+        let confluences = [];
+        let tradeLogs = [];
+        let base64ImageString = "";
+        let currentCalendarDate = new Date();
+
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const sessionEmail = getSession();
+            
+            // Safe Date & Time Setter
+            try {
+                const now = new Date();
+                const dateInput = document.getElementById('trade-date');
+                const timeInput = document.getElementById('trade-time');
+                if (dateInput) {
+                    const tzOffset = now.getTimezoneOffset() * 60000;
+                    dateInput.value = (new Date(now.getTime() - tzOffset)).toISOString().split('T')[0];
+                }
+                if (timeInput) timeInput.value = now.toTimeString().slice(0,5);
+            } catch(e) {}
+
+            if (sessionEmail) {
+                activeUser = dbUsers.find(u => u.email === sessionEmail);
+                if(activeUser) {
+                    loadUserData();
+                    showScreen('main-app');
+                    switchTab('info'); // Sets new Info/Home page as default upon login
+                    return;
+                }
+            }
+            showScreen('landing-screen');
+        });
+
+        // --- ROUTING / SCREEN MANAGEMENT ---
+        const screens = ['landing-screen', 'auth-signup', 'auth-login', 'auth-verify', 'main-app'];
+        function showScreen(screenId) {
+            screens.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.add('hidden');
+            });
+            const activeEl = document.getElementById(screenId);
+            if (activeEl) activeEl.classList.remove('hidden');
+            
+            if (screenId === 'main-app' && activeUser) {
+                const userDisp = document.getElementById('user-display');
+                if (userDisp) userDisp.innerText = `@${activeUser.username}`;
+                const accUser = document.getElementById('acc-username');
+                if (accUser) accUser.value = activeUser.username;
+                calculateStats();
+            }
+        }
+
+        const tabs = ['info', 'home', 'journal', 'calendar', 'rules'];
+        function switchTab(tabId) {
+            tabs.forEach(id => {
+                const view = document.getElementById(`view-${id}`);
+                const tab = document.getElementById(`tab-${id}`);
+                if(view) view.classList.add('hidden');
+                if(tab) tab.className = 'tab-inactive pb-3 text-sm transition-colors hover:text-slate-800';
+            });
+            const activeView = document.getElementById(`view-${tabId}`);
+            const activeTab = document.getElementById(`tab-${tabId}`);
+            if(activeView) activeView.classList.remove('hidden');
+            if(activeTab) activeTab.className = 'tab-active pb-3 text-sm transition-colors';
+            if (tabId === 'calendar') renderCalendar();
+        }
+
+        // --- AUTHENTICATION & ACCOUNT ---
+        function handleSignup(e) {
+            e.preventDefault();
+            const username = document.getElementById('reg-username').value.trim();
+            const age = parseInt(document.getElementById('reg-age').value);
+            const email = document.getElementById('reg-email').value.trim().toLowerCase();
+            const password = document.getElementById('reg-password').value;
+            
+            if (isNaN(age) || age < 18) return alert("You must be 18 or older.");
+            if (dbUsers.some(u => u.email === email)) return alert("Email already exists. Try logging in.");
+            
+            dbUsers.push({ username, age, email, password });
+            setStorage('tl_global_users', dbUsers);
+            document.getElementById('signup-form').reset();
+            
+            // Bypass login entirely to make it seamless
+            activeUser = dbUsers[dbUsers.length - 1];
+            setSession(activeUser.email);
+            loadUserData();
+            showScreen('main-app');
+            switchTab('info');
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value.trim().toLowerCase();
+            const password = document.getElementById('login-password').value;
+            const user = dbUsers.find(u => u.email === email && u.password === password);
+            
+            if (!user) return alert("Invalid email or password.");
+            
+            activeCode = Math.floor(100000 + Math.random() * 900000).toString();
+            tempLoginEmail = email;
+            alert(`[SIMULATED EMAIL SYSTEM]\n\nTo: ${email}\n\nYour code is: ${activeCode}`);
+            showScreen('auth-verify');
+        }
+
+        function handleVerify(e) {
+            e.preventDefault();
+            const codeInput = document.getElementById('verify-code').value.trim();
+            if (codeInput === activeCode) {
+                activeUser = dbUsers.find(u => u.email === tempLoginEmail);
+                setSession(activeUser.email);
+                activeCode = tempLoginEmail = null;
+                document.getElementById('verify-form').reset();
+                document.getElementById('login-form').reset();
+                loadUserData();
+                showScreen('main-app');
+                switchTab('info');
+            } else {
+                alert("Incorrect verification code.");
+            }
+        }
+
+        function handleAccountUpdate(e) {
+            e.preventDefault();
+            const oldPass = document.getElementById('acc-old-pass').value;
+            const newPass = document.getElementById('acc-new-pass').value;
+            const newUsername = document.getElementById('acc-username').value.trim();
+            
+            if (oldPass !== activeUser.password) return alert("Incorrect old password.");
+            const userIndex = dbUsers.findIndex(u => u.email === activeUser.email);
+            if (userIndex > -1) {
+                dbUsers[userIndex].username = newUsername || activeUser.username;
+                if (newPass) dbUsers[userIndex].password = newPass;
+                setStorage('tl_global_users', dbUsers);
+                activeUser = dbUsers[userIndex]; 
+                document.getElementById('user-display').innerText = `@${activeUser.username}`;
+                alert("Account updated successfully.");
+                document.getElementById('acc-old-pass').value = '';
+                document.getElementById('acc-new-pass').value = '';
+            }
+        }
+
+        function logout() {
+            clearSession();
+            activeUser = null; tradeLogs = confluences = [];
+            showScreen('landing-screen');
+        }
+
+        // --- DATA MANAGEMENT ---
+        function loadUserData() {
+            const userKey = activeUser.email;
+            confluences = getStorage(`tl_conf_${userKey}`, [
+                { id: 1, text: "HTF Bias Aligned", checked: false },
+                { id: 2, text: "Liquidity Swept", checked: false }
+            ]);
+            if (!Array.isArray(confluences)) confluences = []; 
+            tradeLogs = getStorage(`tl_logs_${userKey}`, []);
+            if (!Array.isArray(tradeLogs)) tradeLogs = []; 
+            
+            const els = ['prop-size', 'prop-status', 'trading-rules', 'risk-parameters'];
+            els.forEach(id => {
+                const el = document.getElementById(id);
+                if(el) {
+                    el.value = getStorage(`tl_${id}_${userKey}`, el.value);
+                    // Single event listener to autosave
+                    el.addEventListener('input', e => setStorage(`tl_${id}_${userKey}`, e.target.value));
+                }
+            });
+            updateChecklists();
+            renderLogs();
+        }
+
+        function saveLogs() { 
+            setStorage(`tl_logs_${activeUser.email}`, tradeLogs); 
+            calculateStats(); 
+            if(document.getElementById('view-calendar') && !document.getElementById('view-calendar').classList.contains('hidden')) renderCalendar();
+        }
+
+        // --- TEXTAREA LOCK TOGGLES ---
+        function toggleRulesEdit() {
+            const rulesEl = document.getElementById('trading-rules');
+            const btn = document.getElementById('toggle-rules-btn');
+            if(!rulesEl || !btn) return;
+            
+            if(rulesEl.hasAttribute('readonly')) {
+                rulesEl.removeAttribute('readonly');
+                rulesEl.classList.replace('bg-slate-50', 'bg-white');
+                rulesEl.classList.replace('border-slate-200', 'border-emerald-500');
+                btn.innerText = '[ Lock In Rules ]';
+                btn.classList.add('text-emerald-600');
+            } else {
+                rulesEl.setAttribute('readonly', true);
+                rulesEl.classList.replace('bg-white', 'bg-slate-50');
+                rulesEl.classList.replace('border-emerald-500', 'border-slate-200');
+                btn.innerText = '[ Unlock ]';
+                btn.classList.remove('text-emerald-600');
+                setStorage(`tl_trading-rules_${activeUser.email}`, rulesEl.value);
+            }
+        }
+
+        function toggleRiskEdit() {
+            const riskEl = document.getElementById('risk-parameters');
+            const btn = document.getElementById('toggle-risk-btn');
+            if(!riskEl || !btn) return;
+            
+            if(riskEl.hasAttribute('readonly')) {
+                riskEl.removeAttribute('readonly');
+                riskEl.classList.replace('bg-slate-50', 'bg-white');
+                riskEl.classList.replace('border-slate-200', 'border-red-500');
+                btn.innerText = '[ Lock Parameters ]';
+                btn.classList.add('text-red-600');
+            } else {
+                riskEl.setAttribute('readonly', true);
+                riskEl.classList.replace('bg-white', 'bg-slate-50');
+                riskEl.classList.replace('border-red-500', 'border-slate-200');
+                btn.innerText = '[ Unlock ]';
+                btn.classList.remove('text-red-600');
+                setStorage(`tl_risk-parameters_${activeUser.email}`, riskEl.value);
+            }
+        }
+
+        // --- STATS & EXPORT ---
+        function formatMoney(amount) {
+            const val = parseFloat(amount || 0);
+            return (val >= 0 ? '+$' : '-$') + Math.abs(val).toFixed(2);
+        }
+
+        function calculateStats() {
+            let totalPnL = 0; let wins = 0;
+            tradeLogs.forEach(t => {
+                totalPnL += parseFloat(t.pnl || 0);
+                if (t.outcome === 'WIN') wins++;
+            });
+            const winrate = tradeLogs.length > 0 ? Math.round((wins / tradeLogs.length) * 100) : 0;
+            const winEl = document.getElementById('stat-winrate'); if(winEl) winEl.innerText = `${winrate}%`;
+            const pnlEl = document.getElementById('stat-pnl');
+            if(pnlEl) {
+                pnlEl.innerText = formatMoney(totalPnL);
+                pnlEl.className = `font-bold ${totalPnL >= 0 ? 'text-emerald-600' : 'text-red-600'}`;
+            }
+        }
+
+        function exportCSV() {
+            if (!tradeLogs.length) return alert("No executions to export.");
+            let csv = "Date,Time,Asset,Direction,Outcome,R:R,PnL,Grade,Context,Mistakes\n";
+            tradeLogs.forEach(l => {
+                csv += `${l.date},${l.time||'-'},${l.asset},${l.direction},${l.outcome},${l.rr||'-'},${l.pnl},${l.grade},"${(l.context||'').replace(/"/g,'""')}","${(l.mistakes||'').replace(/"/g,'""')}"\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `Tradinglock_${activeUser.username}.csv`;
+            link.click();
+        }
+
+        // --- CHECKLIST & GRADING ---
+        function updateChecklists() {
+            const cfg = document.getElementById('config-checklist');
+            const act = document.getElementById('active-checklist');
+            if(!cfg || !act) return;
+            cfg.innerHTML = ''; act.innerHTML = '';
+            confluences.forEach(item => {
+                cfg.innerHTML += `<div class="flex items-center justify-between p-2 rounded hover:bg-slate-50 group border border-transparent hover:border-slate-100">
+                    <span class="text-xs">${item.text}</span><button type="button" onclick="removeConfluence(${item.id})" class="text-slate-400 hover:text-red-500 text-xs opacity-0 group-hover:opacity-100">✕</button></div>`;
+                act.innerHTML += `<label class="flex items-center gap-2 cursor-pointer p-1.5 hover:bg-white rounded border border-transparent hover:border-slate-200 shadow-sm">
+                    <input type="checkbox" ${item.checked?'checked':''} onchange="toggleCheck(${item.id})" class="accent-emerald-600"><span class="text-[11px] font-medium">${item.text}</span></label>`;
+            });
+            calculateGrade();
+        }
+
+        function addConfluenceItem() {
+            const input = document.getElementById('new-confluence-input');
+            const val = input ? input.value.trim() : '';
+            if(val) { 
+                confluences.push({ id: Date.now(), text: val, checked: false }); 
+                setStorage(`tl_conf_${activeUser.email}`, confluences); 
+                input.value = ''; updateChecklists(); 
+            }
+        }
+        function removeConfluence(id) { confluences = confluences.filter(c => c.id !== id); setStorage(`tl_conf_${activeUser.email}`, confluences); updateChecklists(); }
+        function toggleCheck(id) { const i = confluences.find(c => c.id === id); if(i) i.checked = !i.checked; calculateGrade(); }
+
+        function calculateGrade() {
+            const tot = confluences.length, chk = confluences.filter(c => c.checked).length, pct = tot ? (chk/tot)*100 : 0;
+            let g = "-", c = "text-slate-300";
+            if (tot) {
+                if (pct >= 100) { g = "A++"; c = "text-emerald-600"; } else if (pct >= 80) { g = "A"; c = "text-teal-600"; }
+                else if (pct >= 60) { g = "B"; c = "text-blue-600"; } else if (pct >= 40) { g = "C"; c = "text-orange-500"; }
+                else { g = "F"; c = "text-red-600"; }
+            }
+            const b = document.getElementById('grade-badge'); 
+            if(b) { b.innerText = g; b.className = `text-xl font-black ${c}`; }
+            return { grade: g, color: c };
+        }
+
+        function previewImage(e) {
+            const reader = new FileReader();
+            reader.onload = () => { 
+                const prev = document.getElementById('screenshot-preview');
+                if(prev) { prev.src = reader.result; prev.classList.remove('hidden'); }
+                base64ImageString = reader.result; 
+            }
+            if(e.target.files[0]) reader.readAsDataURL(e.target.files[0]);
+        }
+
+        // --- LOGGING ---
+        function saveTradeEntry(e) {
+            e.preventDefault();
+            const rating = calculateGrade();
+            const entry = {
+                id: Date.now(),
+                date: document.getElementById('trade-date').value, 
+                time: document.getElementById('trade-time') ? document.getElementById('trade-time').value : '',
+                rr: document.getElementById('trade-rr') ? document.getElementById('trade-rr').value : '-',
+                asset: document.getElementById('trade-asset').value.toUpperCase(),
+                direction: document.getElementById('trade-direction').value,
+                outcome: document.getElementById('trade-outcome').value,
+                pnl: parseFloat(document.getElementById('trade-pnl').value),
+                context: document.getElementById('trade-context').value,
+                mistakes: document.getElementById('trade-mistakes').value || "-",
+                compliance: document.getElementById('trade-compliance').value || "-",
+                grade: rating.grade, gradeColor: rating.color, screenshot: base64ImageString
+            };
+            tradeLogs.unshift(entry);
+            saveLogs();
+            
+            document.getElementById('trade-form').reset();
+            
+            // Reset defaults
+            const now = new Date();
+            const tzOffset = now.getTimezoneOffset() * 60000;
+            document.getElementById('trade-date').value = (new Date(now.getTime() - tzOffset)).toISOString().split('T')[0];
+            if (document.getElementById('trade-time')) document.getElementById('trade-time').value = now.toTimeString().slice(0,5);
+            
+            const prev = document.getElementById('screenshot-preview');
+            if(prev) prev.classList.add('hidden'); 
+            base64ImageString = "";
+            
+            confluences.forEach(c => c.checked = false); 
+            updateChecklists(); 
+            renderLogs();
+        }
+
+        function deleteLog(id) { tradeLogs = tradeLogs.filter(l => l.id !== id); saveLogs(); renderLogs(); }
+
+        function renderLogs() {
+            const c = document.getElementById('history-container');
+            if (!c) return;
+            if (!tradeLogs.length) { c.innerHTML = `<div class="text-xs text-slate-400 text-center py-10 bg-slate-50 rounded-lg border border-dashed">No executions logged yet.</div>`; return; }
+            
+            c.innerHTML = '';
+            tradeLogs.forEach(l => {
+                let os = l.outcome === 'WIN' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : l.outcome === 'LOSS' ? 'text-red-700 bg-red-50 border-red-200' : 'text-slate-600 bg-slate-100 border-slate-200';
+                let pnlStr = formatMoney(l.pnl);
+                let pnlCol = l.pnl >= 0 ? 'text-emerald-600' : 'text-red-600';
+                
+                c.innerHTML += `<div class="bg-white border border-slate-200 rounded-lg p-5 shadow-sm">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="flex flex-wrap items-center gap-3">
+                            <span class="text-xs font-medium text-slate-400">${l.date} ${l.time ? '@ '+l.time : ''}</span>
+                            <span class="text-sm font-bold text-slate-900">${l.asset}</span>
+                            <span class="text-[9px] font-bold border border-slate-200 bg-slate-50 px-1.5 py-0.5 rounded text-slate-600">${l.direction}</span>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded border ${os}">${l.outcome}</span>
+                            <span class="text-[10px] font-bold text-slate-500 px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200">R:R ${l.rr || '-'}</span>
+                            <span class="text-xs font-bold ${pnlCol}">${pnlStr}</span>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <span class="text-lg font-black ${l.gradeColor}">${l.grade}</span>
+                            <button type="button" onclick="deleteLog(${l.id})" class="text-slate-400 hover:text-red-500">✕</button>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="md:col-span-3 space-y-3">
+                            <div><span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Context</span><p class="text-xs text-slate-700 bg-slate-50 p-2.5 rounded border">${l.context}</p></div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div><span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Mistakes</span><p class="text-xs text-slate-700 bg-slate-50 p-2.5 rounded border">${l.mistakes}</p></div>
+                                <div><span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Compliance</span><p class="text-xs text-slate-700 bg-slate-50 p-2.5 rounded border">${l.compliance}</p></div>
+                            </div>
+                        </div>
+                        <div class="md:col-span-1">
+                            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Chart</span>
+                            ${l.screenshot ? `<img src="${l.screenshot}" class="w-full h-24 object-cover rounded border cursor-pointer" onclick="window.open(this.src)">` : `<div class="w-full h-24 bg-slate-50 border rounded flex items-center justify-center text-[10px] text-slate-400">No Image</div>`}
+                        </div>
+                    </div>
+                </div>`;
+            });
+        }
+
+        // --- CALENDAR & ADVANCED STATS ---
+        function changeMonth(offset) {
+            currentCalendarDate.setMonth(currentCalendarDate.getMonth() + offset);
+            renderCalendar();
+        }
+
+        function renderCalendar() {
+            const year = currentCalendarDate.getFullYear();
+            const month = currentCalendarDate.getMonth();
+            
+            const label = document.getElementById('calendar-month-label');
+            if(label) {
+                const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                label.innerText = `${monthNames[month]} ${year}`;
+            }
+
+            let monthTrades = 0; let monthWins = 0;
+            let allTrades = tradeLogs.length; let allWins = 0;
+
+            const dailyStats = {};
+            tradeLogs.forEach(log => {
+                if(log.outcome === 'WIN') allWins++;
+                
+                if(!log.date) return;
+                const logParts = log.date.split('-');
+                if (logParts.length === 3) {
+                    const lYear = parseInt(logParts[0]);
+                    const lMonth = parseInt(logParts[1]) - 1; 
+                    if (lYear === year && lMonth === month) {
+                        monthTrades++;
+                        if(log.outcome === 'WIN') monthWins++;
+                    }
+                }
+
+                if(!dailyStats[log.date]) dailyStats[log.date] = { pnl: 0, trades: 0 };
+                dailyStats[log.date].pnl += parseFloat(log.pnl || 0);
+                dailyStats[log.date].trades++;
+            });
+
+            const mWinrate = monthTrades > 0 ? Math.round((monthWins / monthTrades) * 100) : 0;
+            const aWinrate = allTrades > 0 ? Math.round((allWins / allTrades) * 100) : 0;
+
+            const elMT = document.getElementById('cal-month-trades'); if(elMT) elMT.innerText = monthTrades;
+            const elMW = document.getElementById('cal-month-winrate'); if(elMW) elMW.innerText = `${mWinrate}%`;
+            const elAT = document.getElementById('cal-all-trades'); if(elAT) elAT.innerText = allTrades;
+            const elAW = document.getElementById('cal-all-winrate'); if(elAW) elAW.innerText = `${aWinrate}%`;
+
+            const grid = document.getElementById('calendar-grid-content');
+            if(!grid) return;
+            grid.innerHTML = '';
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            for (let i = 0; i < firstDay; i++) {
+                grid.innerHTML += `<div class="bg-transparent h-20 rounded-md"></div>`;
+            }
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const stat = dailyStats[dateString];
+                
+                let bgClass = "bg-slate-50 border-slate-200";
+                let textHtml = `<span class="text-slate-400 text-xs">No trades</span>`;
+                
+                if (stat) {
+                    if (stat.pnl > 0) {
+                        bgClass = "bg-emerald-50 border-emerald-300";
+                        textHtml = `<span class="text-emerald-700 font-bold text-sm">+${stat.pnl.toFixed(2)}</span><br><span class="text-[9px] text-emerald-600">${stat.trades} Trades</span>`;
+                    } else if (stat.pnl < 0) {
+                        bgClass = "bg-red-50 border-red-300";
+                        textHtml = `<span class="text-red-700 font-bold text-sm">${stat.pnl.toFixed(2)}</span><br><span class="text-[9px] text-red-600">${stat.trades} Trades</span>`;
+                    } else {
+                        bgClass = "bg-orange-50 border-orange-300";
+                        textHtml = `<span class="text-orange-700 font-bold text-sm">BE ($0)</span><br><span class="text-[9px] text-orange-600">${stat.trades} Trades</span>`;
+                    }
+                }
+
+                grid.innerHTML += `
+                    <div class="h-20 p-2 border rounded-md ${bgClass} flex flex-col justify-between">
+                        <span class="text-[10px] font-bold text-slate-500">${d}</span>
+                        <div class="text-right leading-tight">${textHtml}</div>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
