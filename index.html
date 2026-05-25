@@ -411,7 +411,8 @@
         }
 
         // --- AUTHENTICATION & ACCOUNT ---
-        function handleSignup(e) {
+        // --- AUTHENTICATION & ACCOUNT (FIREBASE) ---
+        async function handleSignup(e) {
             e.preventDefault();
             const username = document.getElementById('reg-username').value.trim();
             const age = parseInt(document.getElementById('reg-age').value);
@@ -419,51 +420,45 @@
             const password = document.getElementById('reg-password').value;
             
             if (isNaN(age) || age < 18) return alert("You must be 18 or older.");
-            if (dbUsers.some(u => u.email === email)) return alert("Email already exists. Try logging in.");
-            
-            dbUsers.push({ username, age, email, password });
-            setStorage('tl_global_users', dbUsers);
-            document.getElementById('signup-form').reset();
-            
-            // Bypass login entirely to make it seamless
-            activeUser = dbUsers[dbUsers.length - 1];
-            setSession(activeUser.email);
-            loadUserData();
-            showScreen('main-app');
-            switchTab('info');
+
+            try {
+                // 1. Create the user in Firebase
+                const userCredential = await window.createUserWithEmailAndPassword(window.auth, email, password);
+                activeUser = { email: userCredential.user.email, username: username, age: age };
+                
+                // 2. Set the session and load the app
+                setSession(activeUser.email);
+                loadUserData();
+                showScreen('main-app');
+                switchTab('info');
+                document.getElementById('signup-form').reset();
+            } catch (error) {
+                alert("Signup failed: " + error.message);
+            }
         }
 
-        function handleLogin(e) {
+        async function handleLogin(e) {
             e.preventDefault();
             const email = document.getElementById('login-email').value.trim().toLowerCase();
             const password = document.getElementById('login-password').value;
-            const user = dbUsers.find(u => u.email === email && u.password === password);
             
-            if (!user) return alert("Invalid email or password.");
-            
-            activeCode = Math.floor(100000 + Math.random() * 900000).toString();
-            tempLoginEmail = email;
-            alert(`[SIMULATED EMAIL SYSTEM]\n\nTo: ${email}\n\nYour code is: ${activeCode}`);
-            showScreen('auth-verify');
-        }
-
-        function handleVerify(e) {
-            e.preventDefault();
-            const codeInput = document.getElementById('verify-code').value.trim();
-            if (codeInput === activeCode) {
-                activeUser = dbUsers.find(u => u.email === tempLoginEmail);
+            try {
+                // 1. Log the user in via Firebase
+                const userCredential = await window.signInWithEmailAndPassword(window.auth, email, password);
+                
+                // 2. Set active user (for now, username defaults to email prefix if not saved in Firestore yet)
+                activeUser = { email: userCredential.user.email, username: email.split('@')[0] };
+                
+                // 3. Set session and load app
                 setSession(activeUser.email);
-                activeCode = tempLoginEmail = null;
-                document.getElementById('verify-form').reset();
                 document.getElementById('login-form').reset();
                 loadUserData();
                 showScreen('main-app');
                 switchTab('info');
-            } else {
-                alert("Incorrect verification code.");
+            } catch (error) {
+                alert("Login failed: " + error.message);
             }
         }
-
         function handleAccountUpdate(e) {
             e.preventDefault();
             const oldPass = document.getElementById('acc-old-pass').value;
