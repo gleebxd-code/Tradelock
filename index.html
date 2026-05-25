@@ -854,32 +854,33 @@
         }
     </script>
 <script type="module">
-  // 1. Import Firebase tools directly from Google's servers
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-app.js";
-  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-auth.js";
-  import { getFirestore } from "https://www.gstatic.com/firebasejs/10.11.1/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { 
+            getAuth, 
+            createUserWithEmailAndPassword, 
+            signInWithEmailAndPassword, 
+            updateProfile, 
+            updatePassword 
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
-  // 2. Your specific Firebase keys
-  const firebaseConfig = {
-    apiKey: "AIzaSyAdGlJEWkygcJtU0o4bl_s2wkDyzbUGEQA",
-    authDomain: "tradinglock-e8a93.firebaseapp.com",
-    projectId: "tradinglock-e8a93",
-    storageBucket: "tradinglock-e8a93.firebasestorage.app",
-    messagingSenderId: "234232295731",
-    appId: "1:234232295731:web:94f9f601c93b806b0bce46"
-  };
+            const firebaseConfig = {
+    apiKey: "AIzaSyAdGlJEWkygcJtU0o4bl_s2wkDyzbUGEQA",
+    authDomain: "tradinglock-e8a93.firebaseapp.com",
+    projectId: "tradinglock-e8a93",
+    storageBucket: "tradinglock-e8a93.firebasestorage.app",
+    messagingSenderId: "234232295731",
+    appId: "1:234232295731:web:94f9f601c93b806b0bce46"
+  };
 
-  // 3. Boot up Firebase
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
 
-  // 4. Make these available to your existing login buttons
-  window.auth = auth;
-  window.db = db;
-  window.createUserWithEmailAndPassword = createUserWithEmailAndPassword;
-  window.signInWithEmailAndPassword = signInWithEmailAndPassword;
-  window.sendEmailVerification = sendEmailVerification;
-</script>
+        // Make functions globally available
+        window.auth = auth;
+        window.createUserWithEmailAndPassword = createUserWithEmailAndPassword;
+        window.signInWithEmailAndPassword = signInWithEmailAndPassword;
+        window.updateProfile = updateProfile;
+        window.updatePassword = updatePassword;
+    </script>
 </body>
 </html>
