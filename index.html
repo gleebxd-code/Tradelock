@@ -412,6 +412,7 @@
 
         // --- AUTHENTICATION & ACCOUNT ---
         // --- AUTHENTICATION & ACCOUNT (FIREBASE) ---
+        // --- AUTHENTICATION & ACCOUNT (FIREBASE) ---
         async function handleSignup(e) {
             e.preventDefault();
             const username = document.getElementById('reg-username').value.trim();
@@ -424,9 +425,15 @@
             try {
                 // 1. Create the user in Firebase
                 const userCredential = await window.createUserWithEmailAndPassword(window.auth, email, password);
+                
+                // 2. Save their username to their Firebase profile permanently
+                await window.updateProfile(userCredential.user, { displayName: username });
+                
                 activeUser = { email: userCredential.user.email, username: username, age: age };
                 
-                // 2. Set the session and load the app
+                // Give the user a clear success message
+                alert("Account created successfully!");
+                
                 setSession(activeUser.email);
                 loadUserData();
                 showScreen('main-app');
@@ -443,13 +450,16 @@
             const password = document.getElementById('login-password').value;
             
             try {
-                // 1. Log the user in via Firebase
+                // 1. Log the user in
                 const userCredential = await window.signInWithEmailAndPassword(window.auth, email, password);
                 
-                // 2. Set active user (for now, username defaults to email prefix if not saved in Firestore yet)
-                activeUser = { email: userCredential.user.email, username: email.split('@')[0] };
+                // 2. Grab their saved username from Firebase (or default to email if none exists)
+                const savedUsername = userCredential.user.displayName || email.split('@')[0];
+                activeUser = { email: userCredential.user.email, username: savedUsername };
                 
-                // 3. Set session and load app
+                // Give the user a clear success message
+                alert("Logged in successfully!");
+                
                 setSession(activeUser.email);
                 document.getElementById('login-form').reset();
                 loadUserData();
@@ -459,7 +469,38 @@
                 alert("Login failed: " + error.message);
             }
         }
-        function handleAccountUpdate(e) {
+
+        async function handleAccountUpdate(e) {
+            e.preventDefault();
+            const oldPass = document.getElementById('acc-old-pass').value;
+            const newPass = document.getElementById('acc-new-pass').value;
+            const newUsername = document.getElementById('acc-username').value.trim();
+            
+            try {
+                // 1. Verify the old password by securely asking Firebase to check it
+                const userCredential = await window.signInWithEmailAndPassword(window.auth, activeUser.email, oldPass);
+                const user = userCredential.user;
+
+                // 2. Update the Username in Firebase if they typed a new one
+                if (newUsername && newUsername !== activeUser.username) {
+                    await window.updateProfile(user, { displayName: newUsername });
+                    activeUser.username = newUsername;
+                    document.getElementById('user-display').innerText = `@${activeUser.username}`;
+                }
+
+                // 3. Update the Password in Firebase if they typed a new one
+                if (newPass) {
+                    await window.updatePassword(user, newPass);
+                }
+
+                alert("Account updated successfully!");
+                document.getElementById('acc-old-pass').value = '';
+                document.getElementById('acc-new-pass').value = '';
+                
+            } catch (error) {
+                alert("Update failed. Make sure your old password is correct.");
+            }
+        }
             e.preventDefault();
             const oldPass = document.getElementById('acc-old-pass').value;
             const newPass = document.getElementById('acc-new-pass').value;
