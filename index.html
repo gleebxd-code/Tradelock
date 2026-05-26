@@ -60,6 +60,39 @@
         } catch (err) { alert(err.message); }
     };
 
+        window.updateUsername = async function() {
+    const newName = prompt("Enter your new username:");
+    
+    // 1. Validation: Don't allow empty or tiny names
+    if (!newName || newName.trim().length < 2) {
+        alert("Username too short or cancelled.");
+        return;
+    }
+
+    const cleanName = newName.trim();
+
+    try {
+        // 2. Update the local app memory
+        activeUser.username = cleanName;
+
+        // 3. Update the UI immediately
+        document.getElementById('user-display').innerText = `@${cleanName}`;
+
+        // 4. Update the Firebase Auth Profile (for the login session)
+        await window.updateProfile(window.auth.currentUser, { 
+            displayName: cleanName 
+        });
+
+        // 5. Update the Firestore Database (for the permanent record)
+        await saveToCloud();
+
+        alert("Username updated successfully!");
+    } catch (err) {
+        console.error("Update failed:", err);
+        alert("Error updating name. Check the console.");
+    }
+};
+        
     window.handleLogin = async function(e) {
         e.preventDefault();
         const email = document.getElementById('login-email').value.trim().toLowerCase();
