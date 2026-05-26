@@ -5,48 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tradinglock</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { 
-            getAuth, 
-            createUserWithEmailAndPassword, 
-            signInWithEmailAndPassword, 
-            updateProfile, 
-            updatePassword 
-        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { 
-            getFirestore, 
-            doc, 
-            setDoc, 
-            getDoc 
-        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-        const firebaseConfig = {
-    apiKey: "AIzaSyAdGlJEWkygcJtU0o4bl_s2wkDyzbUGEQA",
-    authDomain: "tradinglock-e8a93.firebaseapp.com",
-    projectId: "tradinglock-e8a93",
-    storageBucket: "tradinglock-e8a93.firebasestorage.app",
-    messagingSenderId: "234232295731",
-    appId: "1:234232295731:web:94f9f601c93b806b0bce46"
-  };
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-
-        // Exposing to standard script
-        window.auth = auth;
-        window.db = db;
-        window.createUserWithEmailAndPassword = createUserWithEmailAndPassword;
-        window.signInWithEmailAndPassword = signInWithEmailAndPassword;
-        window.updateProfile = updateProfile;
-        window.updatePassword = updatePassword;
-        window.doc = doc;
-        window.setDoc = setDoc;
-        window.getDoc = getDoc;
-    </script>
-
     <style>
         .tab-active { border-bottom: 2px solid #059669; color: #059669; font-weight: bold; }
         .tab-inactive { border-bottom: 2px solid transparent; color: #64748b; }
@@ -132,6 +90,7 @@
         </div>
 
         <main class="flex-1 max-w-6xl w-full mx-auto p-6">
+            
             <div id="view-info" class="space-y-6">
                 <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-8 text-center">
                     <h2 class="text-3xl font-black text-slate-900 mb-4 tracking-tighter">Welcome to TRADINGLOCK</h2>
@@ -167,24 +126,24 @@
                         <div>
                             <span class="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-1">Prop Firm Status</span>
                             <div class="flex items-center gap-2">
-                                <input type="text" id="prop-size" placeholder="$50k" class="text-xl font-black w-24 bg-transparent border-b border-dashed border-slate-300">
-                                <select id="prop-status" class="text-sm font-bold bg-slate-100 p-1 rounded">
+                                <input type="text" id="prop-size" placeholder="$50k" class="text-xl font-black w-24 bg-transparent border-b border-dashed border-slate-300 focus:outline-none">
+                                <select id="prop-status" class="text-sm font-bold bg-slate-100 p-1 rounded focus:outline-none">
                                     <option>Phase 1</option><option>Phase 2</option><option>Funded</option><option>Blown</option>
                                 </select>
                             </div>
                         </div>
-                        <button onclick="exportCSV()" class="bg-slate-900 text-white text-xs font-bold px-4 py-2 rounded">Export CSV</button>
+                        <button onclick="exportCSV()" class="bg-slate-900 text-white text-xs font-bold px-4 py-2 rounded hover:bg-slate-700">Export CSV</button>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="bg-white rounded-xl border p-6">
-                        <div class="flex justify-between mb-3"><h3 class="font-black">STRICT RULES</h3><button onclick="toggleEdit('trading-rules')" class="text-xs font-bold text-slate-400">[ Unlock ]</button></div>
-                        <textarea id="trading-rules" class="w-full h-40 p-4 text-sm bg-slate-50 rounded-lg resize-none" readonly></textarea>
+                        <div class="flex justify-between mb-3"><h3 class="font-black">STRICT RULES</h3><button onclick="toggleEdit('trading-rules')" class="text-xs font-bold text-slate-400 hover:text-slate-700">[ Unlock ]</button></div>
+                        <textarea id="trading-rules" class="w-full h-40 p-4 text-sm bg-slate-50 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500" readonly placeholder="Write your non-negotiable rules here..."></textarea>
                     </div>
                     <div class="bg-white rounded-xl border p-6">
-                        <div class="flex justify-between mb-3"><h3 class="font-black text-red-600">RISK PARAMETERS</h3><button onclick="toggleEdit('risk-parameters')" class="text-xs font-bold text-slate-400">[ Unlock ]</button></div>
-                        <textarea id="risk-parameters" class="w-full h-40 p-4 text-sm bg-slate-50 rounded-lg resize-none" readonly></textarea>
+                        <div class="flex justify-between mb-3"><h3 class="font-black text-red-600">RISK PARAMETERS</h3><button onclick="toggleEdit('risk-parameters')" class="text-xs font-bold text-slate-400 hover:text-slate-700">[ Unlock ]</button></div>
+                        <textarea id="risk-parameters" class="w-full h-40 p-4 text-sm bg-slate-50 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-red-500" readonly placeholder="Max loss per day? Max risk per trade?..."></textarea>
                     </div>
                 </div>
                 <div id="history-container" class="space-y-4"></div>
@@ -208,18 +167,18 @@
                             <input type="number" id="trade-pnl" step="0.01" placeholder="PnL ($)" class="p-2 border rounded-md text-sm" required>
                             <div class="md:col-span-2">
                                 <label class="text-xs font-bold text-slate-500">Checklist Grade: <span id="grade-badge" class="text-emerald-600 font-black">-</span></label>
-                                <div id="active-checklist" class="grid grid-cols-2 gap-2 bg-slate-50 p-2 rounded border text-xs"></div>
+                                <div id="active-checklist" class="grid grid-cols-2 gap-2 bg-slate-50 p-2 rounded border text-xs min-h-[40px]"></div>
                             </div>
                         </div>
-                        <textarea id="trade-context" placeholder="Context..." class="w-full p-2 border rounded-md text-sm h-20 bg-slate-50" required></textarea>
-                        <button type="submit" class="w-full bg-slate-900 text-white font-black py-4 rounded-lg">LOCK EXECUTION</button>
+                        <textarea id="trade-context" placeholder="Context (Why did you take this trade?)..." class="w-full p-2 border rounded-md text-sm h-20 bg-slate-50" required></textarea>
+                        <button type="submit" class="w-full bg-slate-900 text-white font-black py-4 rounded-lg hover:bg-slate-800">LOCK EXECUTION</button>
                     </form>
                 </div>
                 <div class="bg-white rounded-xl border p-5">
                     <h3 class="text-sm font-bold mb-4">Setup Confluences</h3>
                     <div class="flex gap-2 mb-4">
                         <input type="text" id="new-confluence-input" placeholder="e.g. 15m FVG" class="flex-1 p-2 border rounded text-xs">
-                        <button onclick="addConfluenceItem()" class="bg-emerald-600 text-white px-3 py-1 rounded font-bold">+</button>
+                        <button onclick="addConfluenceItem()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded font-bold">+</button>
                     </div>
                     <div id="config-checklist" class="space-y-1 max-h-48 overflow-y-auto"></div>
                 </div>
@@ -230,8 +189,8 @@
                     <div class="flex justify-between items-center mb-6">
                         <h2 class="text-xl font-black" id="calendar-month-label">Month Year</h2>
                         <div class="flex gap-2">
-                            <button onclick="changeMonth(-1)" class="p-2 bg-slate-100 rounded text-xs font-bold">← Prev</button>
-                            <button onclick="changeMonth(1)" class="p-2 bg-slate-100 rounded text-xs font-bold">Next →</button>
+                            <button onclick="changeMonth(-1)" class="p-2 bg-slate-100 hover:bg-slate-200 rounded text-xs font-bold">← Prev</button>
+                            <button onclick="changeMonth(1)" class="p-2 bg-slate-100 hover:bg-slate-200 rounded text-xs font-bold">Next →</button>
                         </div>
                     </div>
                     <div class="grid grid-cols-7 gap-2 text-center text-[10px] font-bold text-slate-400 uppercase mb-2">
@@ -246,267 +205,342 @@
                     <h2 class="text-lg font-black mb-6 border-b pb-2">Account Settings</h2>
                     <form onsubmit="handleAccountUpdate(event)" class="space-y-4">
                         <label class="block text-xs font-bold">Username</label>
-                        <input type="text" id="acc-username" class="w-full p-2 border rounded text-sm bg-slate-50">
-                        <label class="block text-xs font-bold">Old Password</label>
-                        <input type="password" id="acc-old-pass" required class="w-full p-2 border rounded text-sm">
-                        <label class="block text-xs font-bold">New Password</label>
-                        <input type="password" id="acc-new-pass" minlength="6" class="w-full p-2 border rounded text-sm">
-                        <button type="submit" class="w-full bg-slate-900 text-white font-bold py-2 rounded">Update Profile</button>
+                        <input type="text" id="acc-username" class="w-full p-2 border rounded text-sm bg-slate-50" required>
+                        
+                        <div class="pt-4 border-t mt-4 text-xs text-slate-500">
+                            Note: Updating passwords requires recent authentication. Please re-login if you receive an error.
+                        </div>
+                        <label class="block text-xs font-bold">New Password (Leave blank to keep current)</label>
+                        <input type="password" id="acc-new-pass" minlength="6" class="w-full p-2 border rounded text-sm bg-slate-50">
+                        
+                        <button type="submit" class="w-full bg-slate-900 text-white font-bold py-3 mt-4 rounded hover:bg-slate-800">Update Profile</button>
                     </form>
                 </div>
             </div>
+
         </main>
     </div>
 
     <script type="module">
-    // --- 1. FIREBASE SETUP ---
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, updateProfile, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { getFirestore, doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, updateProfile, signOut, updatePassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    const firebaseConfig = {
-        apiKey: "YOUR_API_KEY",
-        authDomain: "YOUR_PROJECT.firebaseapp.com",
-        projectId: "YOUR_PROJECT_ID",
-        storageBucket: "YOUR_PROJECT.appspot.com",
-        messagingSenderId: "YOUR_ID",
-        appId: "YOUR_APP_ID"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-
-    // --- 2. GLOBAL STATE ---
-    let activeUser = null;
-    let tradeLogs = [];
-    let confluences = [];
-    let currentCalendarDate = new Date();
-
-    // --- 3. THE "BLANK SCREEN" PREVENTER (Navigation) ---
-    window.showScreen = function(id) {
-        const screens = ['landing-screen', 'auth-signup', 'auth-login', 'main-app'];
-        screens.forEach(s => {
-            const el = document.getElementById(s);
-            if(el) el.classList.add('hidden');
-        });
-        const target = document.getElementById(id);
-        if(target) target.classList.remove('hidden');
-    };
-
-    window.switchTab = function(id) {
-        ['info', 'home', 'journal', 'calendar', 'rules'].forEach(t => {
-            const view = document.getElementById(`view-${t}`);
-            const tab = document.getElementById(`tab-${t}`);
-            if(view) view.classList.add('hidden');
-            if(tab) tab.className = 'tab-inactive pb-3 text-sm cursor-pointer';
-        });
-        const activeView = document.getElementById(`view-${id}`);
-        const activeTab = document.getElementById(`tab-${id}`);
-        if(activeView) activeView.classList.remove('hidden');
-        if(activeTab) activeTab.className = 'tab-active pb-3 text-sm cursor-pointer';
-        if (id === 'calendar') window.renderCalendar();
-    };
-
-    // --- 4. CLOUD DATA ENGINE ---
-    async function saveToCloud() {
-        if(!activeUser) return;
-        try {
-            await setDoc(doc(db, "users", activeUser.email), {
-                username: activeUser.username,
-                tradeLogs: tradeLogs,
-                confluences: confluences
-            }, { merge: true });
-        } catch (e) { console.error("Cloud Save Error:", e); }
-    }
-
-    async function loadUserData() {
-        if(!activeUser) return;
-        try {
-            const docSnap = await getDoc(doc(db, "users", activeUser.email));
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                tradeLogs = data.tradeLogs || [];
-                confluences = data.confluences || [];
-                if(data.username) activeUser.username = data.username;
-            }
-            document.getElementById('user-display').innerText = `@${activeUser.username}`;
-            renderChecklists();
-            calculateStats();
-        } catch (e) { console.error("Load Error:", e); }
-    }
-
-    // --- 5. USERNAME & AUTH ---
-    window.updateUsername = async function() {
-        const newName = prompt("Enter your new username:");
-        if (newName && newName.trim().length > 1) {
-            activeUser.username = newName.trim();
-            document.getElementById('user-display').innerText = `@${activeUser.username}`;
-            await updateProfile(auth.currentUser, { displayName: activeUser.username });
-            await saveToCloud();
-            alert("Username updated!");
-        }
-    };
-
-    window.handleSignup = async function(e) {
-        e.preventDefault();
-        const username = document.getElementById('reg-username').value.trim();
-        const email = document.getElementById('reg-email').value.trim().toLowerCase();
-        const password = document.getElementById('reg-password').value;
-        try {
-            const userCred = await createUserWithEmailAndPassword(auth, email, password);
-            await updateProfile(userCred.user, { displayName: username });
-            activeUser = { email, username };
-            await saveToCloud();
-            localStorage.setItem('tl_active_session', email);
-            location.reload();
-        } catch (err) { alert(err.message); }
-    };
-
-    window.handleLogin = async function(e) {
-        e.preventDefault();
-        const email = document.getElementById('login-email').value.trim().toLowerCase();
-        const password = document.getElementById('login-password').value;
-        try {
-            await signInWithEmailAndPassword(auth, email, password);
-            localStorage.setItem('tl_active_session', email);
-            location.reload();
-        } catch (err) { alert(err.message); }
-    };
-
-    window.logout = function() {
-        localStorage.removeItem('tl_active_session');
-        signOut(auth).then(() => location.reload());
-    };
-
-    // --- 6. TRADES & CALENDAR ---
-    window.saveTradeEntry = async function(e) {
-        e.preventDefault();
-        const trade = {
-            date: document.getElementById('trade-date').value,
-            pnl: parseFloat(document.getElementById('trade-pnl').value),
-            outcome: document.getElementById('trade-outcome').value,
-            grade: document.getElementById('grade-badge').innerText,
-            asset: document.getElementById('trade-asset').value.toUpperCase(),
-            id: Date.now()
+        // Real config restored here!
+        const firebaseConfig = {
+            apiKey: "AIzaSyAdGlJEWkygcJtU0o4bl_s2wkDyzbUGEQA",
+            authDomain: "tradinglock-e8a93.firebaseapp.com",
+            projectId: "tradinglock-e8a93",
+            storageBucket: "tradinglock-e8a93.firebasestorage.app",
+            messagingSenderId: "234232295731",
+            appId: "1:234232295731:web:94f9f601c93b806b0bce46"
         };
-        tradeLogs.push(trade);
-        await saveToCloud();
-        calculateStats();
-        document.getElementById('trade-form').reset();
-        window.switchTab('home');
-    };
 
-    window.deleteTrade = async function(id) {
-        if(confirm("Delete this execution?")) {
-            tradeLogs = tradeLogs.filter(t => t.id !== id);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let activeUser = null;
+        let tradeLogs = [];
+        let confluences = [];
+        let currentCalendarDate = new Date();
+
+        // --- NAVIGATION & UI ---
+        window.showScreen = function(id) {
+            ['landing-screen', 'auth-signup', 'auth-login', 'main-app'].forEach(s => {
+                const el = document.getElementById(s);
+                if(el) el.classList.add('hidden');
+            });
+            const target = document.getElementById(id);
+            if(target) target.classList.remove('hidden');
+        };
+
+        window.switchTab = function(id) {
+            ['info', 'home', 'journal', 'calendar', 'rules'].forEach(t => {
+                const view = document.getElementById(`view-${t}`);
+                const tab = document.getElementById(`tab-${t}`);
+                if(view) view.classList.add('hidden');
+                if(tab) tab.className = 'tab-inactive pb-3 text-sm cursor-pointer transition-colors';
+            });
+            const activeView = document.getElementById(`view-${id}`);
+            const activeTab = document.getElementById(`tab-${id}`);
+            if(activeView) activeView.classList.remove('hidden');
+            if(activeTab) activeTab.className = 'tab-active pb-3 text-sm cursor-pointer transition-colors';
+            if (id === 'calendar') window.renderCalendar();
+        };
+
+        window.toggleEdit = function(id) {
+            const el = document.getElementById(id);
+            if(el) {
+                el.readOnly = !el.readOnly;
+                if(!el.readOnly) el.focus();
+            }
+        };
+
+        // --- CLOUD DATA ---
+        async function saveToCloud() {
+            if(!activeUser) return;
+            try {
+                await setDoc(doc(db, "users", activeUser.email), {
+                    username: activeUser.username,
+                    tradeLogs: tradeLogs,
+                    confluences: confluences
+                }, { merge: true });
+            } catch (e) { console.error("Save Error:", e); }
+        }
+
+        async function loadUserData() {
+            if(!activeUser) return;
+            try {
+                const docSnap = await getDoc(doc(db, "users", activeUser.email));
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    tradeLogs = data.tradeLogs || [];
+                    confluences = data.confluences || [];
+                    if(data.username) activeUser.username = data.username;
+                }
+                document.getElementById('user-display').innerText = `@${activeUser.username}`;
+                document.getElementById('acc-username').value = activeUser.username;
+                renderChecklists();
+                calculateStats();
+            } catch (e) { console.error("Load Error:", e); }
+        }
+
+        // --- AUTHENTICATION ---
+        window.handleSignup = async function(e) {
+            if(e) e.preventDefault();
+            const username = document.getElementById('reg-username').value.trim();
+            const email = document.getElementById('reg-email').value.trim().toLowerCase();
+            const password = document.getElementById('reg-password').value;
+            try {
+                const userCred = await createUserWithEmailAndPassword(auth, email, password);
+                await updateProfile(userCred.user, { displayName: username });
+                activeUser = { email, username };
+                await saveToCloud();
+                location.reload();
+            } catch (err) { alert(err.message); }
+        };
+
+        window.handleLogin = async function(e) {
+            if(e) e.preventDefault();
+            const email = document.getElementById('login-email').value.trim().toLowerCase();
+            const password = document.getElementById('login-password').value;
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                location.reload();
+            } catch (err) { alert(err.message); }
+        };
+
+        window.logout = function() {
+            signOut(auth).then(() => location.reload());
+        };
+
+        window.handleAccountUpdate = async function(e) {
+            if(e) e.preventDefault();
+            const newName = document.getElementById('acc-username').value.trim();
+            const newPass = document.getElementById('acc-new-pass').value;
+            
+            try {
+                let updated = false;
+                if(newName && newName !== activeUser.username) {
+                    activeUser.username = newName;
+                    document.getElementById('user-display').innerText = `@${newName}`;
+                    await updateProfile(auth.currentUser, { displayName: newName });
+                    await saveToCloud();
+                    updated = true;
+                }
+                if(newPass.length >= 6) {
+                    await updatePassword(auth.currentUser, newPass);
+                    document.getElementById('acc-new-pass').value = '';
+                    updated = true;
+                }
+                if(updated) alert("Account settings updated successfully!");
+            } catch(err) {
+                alert("Error: " + err.message);
+            }
+        };
+
+        // --- TRADE LOGIC ---
+        window.saveTradeEntry = async function(e) {
+            if(e) e.preventDefault();
+            
+            // Collects all data from the form
+            const trade = {
+                date: document.getElementById('trade-date').value,
+                time: document.getElementById('trade-time').value,
+                asset: document.getElementById('trade-asset').value.toUpperCase(),
+                direction: document.getElementById('trade-direction').value,
+                rr: document.getElementById('trade-rr').value,
+                outcome: document.getElementById('trade-outcome').value,
+                pnl: parseFloat(document.getElementById('trade-pnl').value),
+                grade: document.getElementById('grade-badge').innerText,
+                context: document.getElementById('trade-context').value,
+                id: Date.now()
+            };
+
+            tradeLogs.push(trade);
             await saveToCloud();
             calculateStats();
+            document.getElementById('trade-form').reset();
+            document.getElementById('grade-badge').innerText = '-';
+            
+            // Uncheck all active checklist items visually
+            document.querySelectorAll('.conf-check').forEach(cb => cb.checked = false);
+            
+            window.switchTab('home');
+        };
+
+        window.deleteTrade = async function(id) {
+            if(confirm("Delete this execution?")) {
+                tradeLogs = tradeLogs.filter(t => t.id !== id);
+                await saveToCloud();
+                calculateStats();
+            }
+        };
+
+        window.exportCSV = function() {
+            if(!tradeLogs.length) return alert("No trades to export!");
+            let csv = "Date,Time,Asset,Direction,R:R,Outcome,PnL,Grade\n";
+            tradeLogs.forEach(t => {
+                csv += `${t.date},${t.time || ''},${t.asset},${t.direction || ''},${t.rr || ''},${t.outcome},${t.pnl},${t.grade}\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Tradinglock_Export_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+        };
+
+        function calculateStats() {
+            const total = tradeLogs.length;
+            const wins = tradeLogs.filter(t => t.outcome === 'WIN').length;
+            const net = tradeLogs.reduce((sum, t) => sum + t.pnl, 0);
+            
+            document.getElementById('stat-winrate').innerText = total ? Math.round((wins/total)*100) + '%' : '0%';
+            document.getElementById('stat-pnl').innerText = `${net >= 0 ? '+' : ''}$${net.toFixed(2)}`;
+            document.getElementById('stat-pnl').className = `text-3xl font-black ${net >= 0 ? 'text-emerald-600' : 'text-red-600'}`;
+            
+            renderHistory();
         }
-    };
 
-    function calculateStats() {
-        const total = tradeLogs.length;
-        const wins = tradeLogs.filter(t => t.outcome === 'WIN').length;
-        const net = tradeLogs.reduce((sum, t) => sum + t.pnl, 0);
-        const wrEl = document.getElementById('stat-winrate');
-        const pnlEl = document.getElementById('stat-pnl');
-        if(wrEl) wrEl.innerText = total ? Math.round((wins/total)*100) + '%' : '0%';
-        if(pnlEl) pnlEl.innerText = `$${net.toFixed(2)}`;
-        renderHistory();
-    }
-
-    function renderHistory() {
-        const container = document.getElementById('history-container');
-        if(!container) return;
-        container.innerHTML = [...tradeLogs].sort((a,b) => b.id - a.id).map(t => `
-            <div class="bg-white p-4 rounded-xl border flex justify-between items-center shadow-sm mb-2">
-                <div>
-                    <span class="font-black text-slate-900">${t.asset}</span> 
-                    <span class="text-[10px] text-slate-400 ml-2 font-bold">${t.date}</span>
+        function renderHistory() {
+            const container = document.getElementById('history-container');
+            if(!container) return;
+            container.innerHTML = [...tradeLogs].sort((a,b) => b.id - a.id).map(t => `
+                <div class="bg-white p-4 rounded-xl border flex justify-between items-center shadow-sm mb-2">
+                    <div>
+                        <span class="font-black text-slate-900">${t.asset}</span> 
+                        <span class="text-[10px] text-slate-400 ml-2 font-bold">${t.date} ${t.time ? '| ' + t.time : ''}</span>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <span class="text-[10px] font-black px-2 py-1 rounded bg-slate-100">${t.grade}</span>
+                        <span class="font-bold ${t.pnl >= 0 ? 'text-emerald-600' : 'text-red-600'}">${t.pnl >= 0 ? '+' : ''}$${t.pnl}</span>
+                        <button onclick="deleteTrade(${t.id})" class="text-slate-300 hover:text-red-500 font-bold ml-2 text-lg">×</button>
+                    </div>
                 </div>
-                <div class="flex items-center gap-4">
-                    <span class="text-[10px] font-black px-2 py-1 rounded bg-slate-100">${t.grade}</span>
-                    <span class="font-bold ${t.pnl >= 0 ? 'text-emerald-600' : 'text-red-600'}">${t.pnl >= 0 ? '+' : ''}$${t.pnl}</span>
-                    <button onclick="deleteTrade(${t.id})" class="text-slate-300 hover:text-red-500 font-bold ml-2 text-lg">×</button>
-                </div>
-            </div>
-        `).join('');
-    }
-
-    window.renderCalendar = function() {
-        const grid = document.getElementById('calendar-grid-content');
-        const label = document.getElementById('calendar-month-label');
-        if(!grid) return;
-        grid.innerHTML = '';
-        const year = currentCalendarDate.getFullYear();
-        const month = currentCalendarDate.getMonth();
-        label.innerText = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(currentCalendarDate);
-        
-        const firstDay = new Date(year, month, 1).getDay();
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-        for(let i=0; i<firstDay; i++) grid.innerHTML += '<div></div>';
-        for(let d=1; d<=daysInMonth; d++) {
-            const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-            const dayTrades = tradeLogs.filter(t => t.date === dateStr);
-            const dayPnL = dayTrades.reduce((s, t) => s + t.pnl, 0);
-            let color = 'bg-white';
-            if(dayTrades.length > 0) color = dayPnL >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200';
-            grid.innerHTML += `<div class="h-16 border rounded p-1 ${color} flex flex-col justify-between">
-                <span class="text-[9px] font-bold text-slate-400">${d}</span>
-                ${dayTrades.length ? `<div class="text-center font-black text-[9px] ${dayPnL >= 0 ? 'text-emerald-600' : 'text-red-600'}">${dayPnL >= 0 ? '+' : ''}${Math.round(dayPnL)}</div>` : ''}
-            </div>`;
+            `).join('');
         }
-    };
 
-    window.changeMonth = (dir) => {
-        currentCalendarDate.setMonth(currentCalendarDate.getMonth() + dir);
-        window.renderCalendar();
-    };
+        // --- CALENDAR ---
+        window.renderCalendar = function() {
+            const grid = document.getElementById('calendar-grid-content');
+            const label = document.getElementById('calendar-month-label');
+            if(!grid) return;
+            
+            grid.innerHTML = '';
+            const year = currentCalendarDate.getFullYear();
+            const month = currentCalendarDate.getMonth();
+            label.innerText = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(currentCalendarDate);
+            
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-    // --- 7. CHECKLISTS ---
-    window.addConfluence = () => {
-        const input = document.getElementById('new-conf');
-        if(input && input.value.trim()) {
-            confluences.push(input.value.trim());
-            input.value = '';
+            for(let i=0; i<firstDay; i++) grid.innerHTML += '<div></div>';
+            for(let d=1; d<=daysInMonth; d++) {
+                const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                const dayTrades = tradeLogs.filter(t => t.date === dateStr);
+                const dayPnL = dayTrades.reduce((s, t) => s + t.pnl, 0);
+                
+                let color = 'bg-white';
+                if(dayTrades.length > 0) color = dayPnL >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200';
+                
+                grid.innerHTML += `
+                <div class="h-16 border rounded p-1 ${color} flex flex-col justify-between">
+                    <span class="text-[9px] font-bold text-slate-400">${d}</span>
+                    ${dayTrades.length ? `<div class="text-center font-black text-[9px] ${dayPnL >= 0 ? 'text-emerald-600' : 'text-red-600'}">${dayPnL >= 0 ? '+' : ''}${Math.round(dayPnL)}</div>` : ''}
+                </div>`;
+            }
+        };
+
+        window.changeMonth = (dir) => {
+            currentCalendarDate.setMonth(currentCalendarDate.getMonth() + dir);
+            window.renderCalendar();
+        };
+
+        // --- CHECKLISTS & CONFLUENCES ---
+        window.addConfluenceItem = () => {
+            const input = document.getElementById('new-confluence-input');
+            if(input && input.value.trim()) {
+                confluences.push(input.value.trim());
+                input.value = '';
+                saveToCloud();
+                renderChecklists();
+            }
+        };
+
+        window.removeConfluence = (idx) => {
+            confluences.splice(idx, 1);
             saveToCloud();
             renderChecklists();
-        }
-    };
+        };
 
-    function renderChecklists() {
-        const config = document.getElementById('config-checklist');
-        const active = document.getElementById('active-checklist');
-        if(!config || !active) return;
-        config.innerHTML = ''; active.innerHTML = '';
-        confluences.forEach((c, idx) => {
-            config.innerHTML += `<div class="flex justify-between text-xs bg-slate-50 p-2 rounded mb-1"><span>${c}</span><button onclick="confluences.splice(${idx},1);saveToCloud();renderChecklists();" class="text-red-500">×</button></div>`;
-            active.innerHTML += `<label class="flex items-center gap-2 p-1"><input type="checkbox" onchange="updateGrade()" class="conf-check"> ${c}</label>`;
+        function renderChecklists() {
+            const config = document.getElementById('config-checklist');
+            const active = document.getElementById('active-checklist');
+            if(!config || !active) return;
+            
+            config.innerHTML = ''; 
+            active.innerHTML = '';
+            
+            confluences.forEach((c, idx) => {
+                config.innerHTML += `<div class="flex justify-between items-center text-xs bg-slate-50 p-2 rounded mb-1"><span>${c}</span><button onclick="removeConfluence(${idx})" class="text-red-500 font-bold hover:bg-red-100 px-2 rounded">×</button></div>`;
+                active.innerHTML += `<label class="flex items-center gap-2 p-1 cursor-pointer"><input type="checkbox" onchange="updateGrade()" class="conf-check"> ${c}</label>`;
+            });
+            window.updateGrade(); // Re-calculate grade
+        }
+
+        window.updateGrade = function() {
+            const checks = document.querySelectorAll('.conf-check');
+            const badge = document.getElementById('grade-badge');
+            if(!badge || checks.length === 0) {
+                if(badge) badge.innerText = '-';
+                return;
+            }
+            
+            const checked = Array.from(checks).filter(c => c.checked).length;
+            const ratio = checked / checks.length;
+            
+            let g = '-';
+            if(ratio === 1) g = 'A++'; 
+            else if(ratio >= 0.8) g = 'A'; 
+            else if(ratio >= 0.6) g = 'B'; 
+            else if(ratio >= 0.4) g = 'C'; 
+            else if(ratio > 0) g = 'D';
+            
+            badge.innerText = g;
+        };
+
+        // --- INITIALIZE LISTENER ---
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                activeUser = { email: user.email, username: user.displayName || user.email.split('@')[0] };
+                await loadUserData();
+                window.showScreen('main-app');
+            } else {
+                window.showScreen('landing-screen');
+            }
         });
-    }
-
-    window.updateGrade = function() {
-        const checks = document.querySelectorAll('.conf-check');
-        const checked = Array.from(checks).filter(c => c.checked).length;
-        const ratio = checks.length ? checked / checks.length : 0;
-        let g = '-';
-        if(ratio === 1) g = 'A++'; else if(ratio >= 0.8) g = 'A'; else if(ratio >= 0.6) g = 'B'; else if(ratio >= 0.4) g = 'C'; else if(ratio > 0) g = 'D';
-        const badge = document.getElementById('grade-badge');
-        if(badge) badge.innerText = g;
-    };
-
-    // --- 8. INITIALIZE ---
-    onAuthStateChanged(auth, async (user) => {
-        if (user) {
-            activeUser = { email: user.email, username: user.displayName || user.email.split('@')[0] };
-            await loadUserData();
-            window.showScreen('main-app');
-        } else {
-            window.showScreen('landing-screen');
-        }
-    });
-</script>
+    </script>
 </body>
 </html>
