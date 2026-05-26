@@ -7,12 +7,22 @@
     <script src="https://cdn.tailwindcss.com"></script>
     
     <script type="module">
-    // --- 1. FIREBASE SETUP ---
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, updateProfile, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { getFirestore, doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { 
+            getAuth, 
+            createUserWithEmailAndPassword, 
+            signInWithEmailAndPassword, 
+            updateProfile, 
+            updatePassword 
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            setDoc, 
+            getDoc 
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    const firebaseConfig = {
+        const firebaseConfig = {
     apiKey: "AIzaSyAdGlJEWkygcJtU0o4bl_s2wkDyzbUGEQA",
     authDomain: "tradinglock-e8a93.firebaseapp.com",
     projectId: "tradinglock-e8a93",
@@ -20,6 +30,248 @@
     messagingSenderId: "234232295731",
     appId: "1:234232295731:web:94f9f601c93b806b0bce46"
   };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Exposing to standard script
+        window.auth = auth;
+        window.db = db;
+        window.createUserWithEmailAndPassword = createUserWithEmailAndPassword;
+        window.signInWithEmailAndPassword = signInWithEmailAndPassword;
+        window.updateProfile = updateProfile;
+        window.updatePassword = updatePassword;
+        window.doc = doc;
+        window.setDoc = setDoc;
+        window.getDoc = getDoc;
+    </script>
+
+    <style>
+        .tab-active { border-bottom: 2px solid #059669; color: #059669; font-weight: bold; }
+        .tab-inactive { border-bottom: 2px solid transparent; color: #64748b; }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans text-slate-800">
+
+    <div id="landing-screen" class="min-h-screen flex items-center justify-center p-4">
+        <div class="max-w-md w-full bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center">
+            <h1 class="text-3xl font-black tracking-tighter text-slate-900 mb-2">TRADINGLOCK</h1>
+            <p class="text-sm text-slate-500 mb-8">Discipline equals freedom. Log your executions.</p>
+            <div class="space-y-3">
+                <button onclick="showScreen('auth-login')" class="w-full bg-slate-900 text-white font-bold py-3 rounded-lg hover:bg-slate-800 transition-colors">Log In</button>
+                <button onclick="showScreen('auth-signup')" class="w-full bg-white border-2 border-slate-200 text-slate-700 font-bold py-3 rounded-lg hover:border-slate-300 transition-colors">Create Account</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="auth-signup" class="hidden min-h-screen flex items-center justify-center p-4">
+        <div class="max-w-md w-full bg-white rounded-xl shadow-sm border border-slate-200 p-8">
+            <button type="button" onclick="showScreen('landing-screen')" class="text-xs font-bold text-slate-400 hover:text-slate-700 mb-6 uppercase tracking-wider">← Back</button>
+            <h2 class="text-2xl font-black mb-6">Sign Up</h2>
+            <form id="signup-form" onsubmit="handleSignup(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Username</label>
+                    <input type="text" id="reg-username" required class="w-full p-3 border rounded-lg bg-slate-50">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Age (18+)</label>
+                    <input type="number" id="reg-age" min="18" required class="w-full p-3 border rounded-lg bg-slate-50">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Email</label>
+                    <input type="email" id="reg-email" required class="w-full p-3 border rounded-lg bg-slate-50">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Password</label>
+                    <input type="password" id="reg-password" required minlength="6" class="w-full p-3 border rounded-lg bg-slate-50">
+                </div>
+                <button type="submit" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-lg hover:bg-emerald-700 mt-2">Register & Enter</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="auth-login" class="hidden min-h-screen flex items-center justify-center p-4">
+        <div class="max-w-md w-full bg-white rounded-xl shadow-sm border border-slate-200 p-8">
+            <button type="button" onclick="showScreen('landing-screen')" class="text-xs font-bold text-slate-400 hover:text-slate-700 mb-6 uppercase tracking-wider">← Back</button>
+            <h2 class="text-2xl font-black mb-6">Log In</h2>
+            <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Email</label>
+                    <input type="email" id="login-email" required class="w-full p-3 border rounded-lg bg-slate-50">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 mb-1">Password</label>
+                    <input type="password" id="login-password" required class="w-full p-3 border rounded-lg bg-slate-50">
+                </div>
+                <button type="submit" class="w-full bg-slate-900 text-white font-bold py-3 rounded-lg hover:bg-slate-800 mt-2">Continue</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="main-app" class="hidden min-h-screen flex flex-col">
+        <header class="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center sticky top-0 z-10">
+            <div class="flex items-baseline">
+                <h1 class="text-xl font-black tracking-tighter text-slate-900">TRADINGLOCK</h1>
+                <span class="text-[10px] font-mono text-slate-400 ml-2 tracking-widest">input=output</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <span id="user-display" class="text-sm font-bold text-slate-500">@user</span>
+                <button onclick="logout()" class="text-xs font-bold text-red-500 hover:text-red-700 bg-red-50 px-3 py-1.5 rounded">Log Out</button>
+            </div>
+        </header>
+
+        <div class="bg-white px-6 border-b border-slate-200">
+            <div class="flex gap-6 overflow-x-auto">
+                <button id="tab-info" onclick="switchTab('info')" class="tab-active pb-3 text-sm transition-colors">Home</button>
+                <button id="tab-home" onclick="switchTab('home')" class="tab-inactive pb-3 text-sm transition-colors">Dashboard</button>
+                <button id="tab-journal" onclick="switchTab('journal')" class="tab-inactive pb-3 text-sm transition-colors">New Entry</button>
+                <button id="tab-calendar" onclick="switchTab('calendar')" class="tab-inactive pb-3 text-sm transition-colors">Calendar</button>
+                <button id="tab-rules" onclick="switchTab('rules')" class="tab-inactive pb-3 text-sm transition-colors">Account</button>
+            </div>
+        </div>
+
+        <main class="flex-1 max-w-6xl w-full mx-auto p-6">
+            <div id="view-info" class="space-y-6">
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-8 text-center">
+                    <h2 class="text-3xl font-black text-slate-900 mb-4 tracking-tighter">Welcome to TRADINGLOCK</h2>
+                    <p class="text-slate-500 mb-10 max-w-2xl mx-auto leading-relaxed text-sm">Discipline equals freedom. Define your rules, track confluences, and respect risk.</p>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+                        <div class="p-6 bg-slate-50 border rounded-xl">
+                            <h3 class="font-bold text-slate-800 mb-2">1. Define Rules</h3>
+                            <p class="text-xs text-slate-500">Lock in your parameters on the Dashboard.</p>
+                        </div>
+                        <div class="p-6 bg-slate-50 border rounded-xl">
+                            <h3 class="font-bold text-slate-800 mb-2">2. Log Executions</h3>
+                            <p class="text-xs text-slate-500">Log every trade with strict checklist grading.</p>
+                        </div>
+                        <div class="p-6 bg-slate-50 border rounded-xl">
+                            <h3 class="font-bold text-slate-800 mb-2">3. Analyze</h3>
+                            <p class="text-xs text-slate-500">Visualize consistency on the Calendar.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-home" class="hidden space-y-6">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-1">Win Rate</span>
+                        <span id="stat-winrate" class="text-3xl font-black text-slate-800">0%</span>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-1">Net PnL</span>
+                        <span id="stat-pnl" class="text-3xl font-black text-slate-800">$0.00</span>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm md:col-span-2 flex items-center justify-between">
+                        <div>
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-1">Prop Firm Status</span>
+                            <div class="flex items-center gap-2">
+                                <input type="text" id="prop-size" placeholder="$50k" class="text-xl font-black w-24 bg-transparent border-b border-dashed border-slate-300">
+                                <select id="prop-status" class="text-sm font-bold bg-slate-100 p-1 rounded">
+                                    <option>Phase 1</option><option>Phase 2</option><option>Funded</option><option>Blown</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button onclick="exportCSV()" class="bg-slate-900 text-white text-xs font-bold px-4 py-2 rounded">Export CSV</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white rounded-xl border p-6">
+                        <div class="flex justify-between mb-3"><h3 class="font-black">STRICT RULES</h3><button onclick="toggleEdit('trading-rules')" class="text-xs font-bold text-slate-400">[ Unlock ]</button></div>
+                        <textarea id="trading-rules" class="w-full h-40 p-4 text-sm bg-slate-50 rounded-lg resize-none" readonly></textarea>
+                    </div>
+                    <div class="bg-white rounded-xl border p-6">
+                        <div class="flex justify-between mb-3"><h3 class="font-black text-red-600">RISK PARAMETERS</h3><button onclick="toggleEdit('risk-parameters')" class="text-xs font-bold text-slate-400">[ Unlock ]</button></div>
+                        <textarea id="risk-parameters" class="w-full h-40 p-4 text-sm bg-slate-50 rounded-lg resize-none" readonly></textarea>
+                    </div>
+                </div>
+                <div id="history-container" class="space-y-4"></div>
+            </div>
+
+            <div id="view-journal" class="hidden grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="md:col-span-2 bg-white rounded-xl border p-6">
+                    <h2 class="text-lg font-black mb-6 border-b pb-2">Log Execution</h2>
+                    <form id="trade-form" onsubmit="saveTradeEntry(event)" class="space-y-5">
+                        <div class="grid grid-cols-2 gap-4">
+                            <input type="date" id="trade-date" class="p-2 border rounded-md text-sm bg-slate-50" required>
+                            <input type="time" id="trade-time" class="p-2 border rounded-md text-sm bg-slate-50" required>
+                        </div>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <input type="text" id="trade-asset" placeholder="Asset (NQ)" class="p-2 border rounded-md text-sm uppercase" required>
+                            <select id="trade-direction" class="p-2 border rounded-md text-sm bg-white"><option value="LONG">Long</option><option value="SHORT">Short</option></select>
+                            <input type="text" id="trade-rr" placeholder="R:R (1:3)" class="p-2 border rounded-md text-sm">
+                            <select id="trade-outcome" class="p-2 border rounded-md text-sm bg-white"><option value="WIN">Win</option><option value="LOSS">Loss</option><option value="BE">BE</option></select>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <input type="number" id="trade-pnl" step="0.01" placeholder="PnL ($)" class="p-2 border rounded-md text-sm" required>
+                            <div class="md:col-span-2">
+                                <label class="text-xs font-bold text-slate-500">Checklist Grade: <span id="grade-badge" class="text-emerald-600 font-black">-</span></label>
+                                <div id="active-checklist" class="grid grid-cols-2 gap-2 bg-slate-50 p-2 rounded border text-xs"></div>
+                            </div>
+                        </div>
+                        <textarea id="trade-context" placeholder="Context..." class="w-full p-2 border rounded-md text-sm h-20 bg-slate-50" required></textarea>
+                        <button type="submit" class="w-full bg-slate-900 text-white font-black py-4 rounded-lg">LOCK EXECUTION</button>
+                    </form>
+                </div>
+                <div class="bg-white rounded-xl border p-5">
+                    <h3 class="text-sm font-bold mb-4">Setup Confluences</h3>
+                    <div class="flex gap-2 mb-4">
+                        <input type="text" id="new-confluence-input" placeholder="e.g. 15m FVG" class="flex-1 p-2 border rounded text-xs">
+                        <button onclick="addConfluenceItem()" class="bg-emerald-600 text-white px-3 py-1 rounded font-bold">+</button>
+                    </div>
+                    <div id="config-checklist" class="space-y-1 max-h-48 overflow-y-auto"></div>
+                </div>
+            </div>
+
+            <div id="view-calendar" class="hidden">
+                <div class="bg-white rounded-xl border p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xl font-black" id="calendar-month-label">Month Year</h2>
+                        <div class="flex gap-2">
+                            <button onclick="changeMonth(-1)" class="p-2 bg-slate-100 rounded text-xs font-bold">← Prev</button>
+                            <button onclick="changeMonth(1)" class="p-2 bg-slate-100 rounded text-xs font-bold">Next →</button>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-7 gap-2 text-center text-[10px] font-bold text-slate-400 uppercase mb-2">
+                        <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+                    </div>
+                    <div id="calendar-grid-content" class="grid grid-cols-7 gap-2"></div>
+                </div>
+            </div>
+
+            <div id="view-rules" class="hidden">
+                <div class="max-w-xl bg-white rounded-xl border p-6">
+                    <h2 class="text-lg font-black mb-6 border-b pb-2">Account Settings</h2>
+                    <form onsubmit="handleAccountUpdate(event)" class="space-y-4">
+                        <label class="block text-xs font-bold">Username</label>
+                        <input type="text" id="acc-username" class="w-full p-2 border rounded text-sm bg-slate-50">
+                        <label class="block text-xs font-bold">Old Password</label>
+                        <input type="password" id="acc-old-pass" required class="w-full p-2 border rounded text-sm">
+                        <label class="block text-xs font-bold">New Password</label>
+                        <input type="password" id="acc-new-pass" minlength="6" class="w-full p-2 border rounded text-sm">
+                        <button type="submit" class="w-full bg-slate-900 text-white font-bold py-2 rounded">Update Profile</button>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module">
+    // --- 1. FIREBASE SETUP ---
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, updateProfile, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_PROJECT.firebaseapp.com",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_PROJECT.appspot.com",
+        messagingSenderId: "YOUR_ID",
+        appId: "YOUR_APP_ID"
+    };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
