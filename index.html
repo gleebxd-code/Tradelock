@@ -7,25 +7,24 @@
     <script src="https://cdn.tailwindcss.com"></script>
     
     <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { 
-        getAuth, 
-        createUserWithEmailAndPassword, 
-        signInWithEmailAndPassword, 
-        updateProfile, 
-        updatePassword 
-    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    
-    // NEW: Import Firestore
-    import { 
-        getFirestore, 
-        doc, 
-        setDoc, 
-        getDoc 
-    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { 
+            getAuth, 
+            createUserWithEmailAndPassword, 
+            signInWithEmailAndPassword, 
+            updateProfile, 
+            updatePassword 
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { 
+            getFirestore, 
+            doc, 
+            setDoc, 
+            getDoc 
+        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyAdGlJEWkygcJtU0o4bl_s2wkDyzbUGEQA",
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyAdGlJEWkygcJtU0o4bl_s2wkDyzbUGEQA",
     authDomain: "tradinglock-e8a93.firebaseapp.com",
     projectId: "tradinglock-e8a93",
     storageBucket: "tradinglock-e8a93.firebasestorage.app",
@@ -33,20 +32,21 @@
     appId: "1:234232295731:web:94f9f601c93b806b0bce46"
   };
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app); // NEW: Initialize Database
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
 
-    window.auth = auth;
-    window.db = db;
-    window.createUserWithEmailAndPassword = createUserWithEmailAndPassword;
-    window.signInWithEmailAndPassword = signInWithEmailAndPassword;
-    window.updateProfile = updateProfile;
-    window.updatePassword = updatePassword;
-    window.doc = doc;
-    window.setDoc = setDoc;
-    window.getDoc = getDoc;
-</script>
+        // Exposing to standard script
+        window.auth = auth;
+        window.db = db;
+        window.createUserWithEmailAndPassword = createUserWithEmailAndPassword;
+        window.signInWithEmailAndPassword = signInWithEmailAndPassword;
+        window.updateProfile = updateProfile;
+        window.updatePassword = updatePassword;
+        window.doc = doc;
+        window.setDoc = setDoc;
+        window.getDoc = getDoc;
+    </script>
 
     <style>
         .tab-active { border-bottom: 2px solid #059669; color: #059669; font-weight: bold; }
@@ -260,13 +260,13 @@
     </div>
 
     <script>
-
-        let dbUsers = JSON.parse(localStorage.getItem('tl_global_users')) || [];
+        // --- DATA & STATE ---
         let activeUser = null;
         let tradeLogs = [];
         let confluences = [];
         let currentCalendarDate = new Date();
 
+        // --- AUTH LOGIC (FIREBASE) ---
         async function handleSignup(e) {
             e.preventDefault();
             const username = document.getElementById('reg-username').value.trim();
@@ -277,7 +277,7 @@
                 await window.updateProfile(userCred.user, { displayName: username });
                 activeUser = { email, username };
                 localStorage.setItem('tl_active_session', email);
-                alert("Success!");
+                alert("Account created! Logging you in.");
                 location.reload();
             } catch (err) { alert(err.message); }
         }
@@ -290,8 +290,7 @@
                 const userCred = await window.signInWithEmailAndPassword(window.auth, email, password);
                 activeUser = { email, username: userCred.user.displayName || email.split('@')[0] };
                 localStorage.setItem('tl_active_session', email);
-                alert("Logged in!");
-                loadUserData();
+                await loadUserData(); // Now correctly waits for cloud data
                 showScreen('main-app');
             } catch (err) { alert(err.message); }
         }
@@ -305,9 +304,9 @@
                 const userCred = await window.signInWithEmailAndPassword(window.auth, activeUser.email, oldPass);
                 if (newName) await window.updateProfile(userCred.user, { displayName: newName });
                 if (newPass) await window.updatePassword(userCred.user, newPass);
-                alert("Updated!");
+                alert("Profile updated!");
                 location.reload();
-            } catch (err) { alert("Update failed: Verify old password."); }
+            } catch (err) { alert("Update failed. Verify your old password."); }
         }
 
         // --- APP LOGIC ---
@@ -352,7 +351,7 @@
             const active = document.getElementById('active-checklist');
             config.innerHTML = ''; active.innerHTML = '';
             confluences.forEach((c, idx) => {
-                config.innerHTML += `<div class="flex justify-between text-xs bg-slate-50 p-1 rounded"><span>${c}</span><button onclick="confluences.splice(${idx},1);renderChecklists();" class="text-red-500">×</button></div>`;
+                config.innerHTML += `<div class="flex justify-between text-xs bg-slate-50 p-1 rounded"><span>${c}</span><button type="button" onclick="confluences.splice(${idx},1);renderChecklists();saveUserData();" class="text-red-500">×</button></div>`;
                 active.innerHTML += `<label class="flex items-center gap-1"><input type="checkbox" onchange="updateGrade()" class="conf-check"> ${c}</label>`;
             });
         }
@@ -369,7 +368,7 @@
             document.getElementById('grade-badge').innerText = grade;
         }
 
-        function saveTradeEntry(e) {
+        async function saveTradeEntry(e) {
             e.preventDefault();
             const trade = {
                 date: document.getElementById('trade-date').value,
@@ -379,10 +378,10 @@
                 asset: document.getElementById('trade-asset').value.toUpperCase()
             };
             tradeLogs.push(trade);
-            saveUserData();
+            await saveUserData();
             calculateStats();
             document.getElementById('trade-form').reset();
-            alert("Execution Locked.");
+            alert("Execution Locked to Cloud.");
             switchTab('home');
         }
 
@@ -452,71 +451,62 @@
             a.click();
         }
 
+        // --- FIRESTORE CLOUD SAVING ---
         async function saveUserData() {
-    if(!activeUser) return;
-    try {
-        // Find the specific document for this user in the "users" collection
-        const userRef = window.doc(window.db, "users", activeUser.email);
-        
-        // Push the arrays to the cloud
-        await window.setDoc(userRef, { 
-            tradeLogs: tradeLogs, 
-            confluences: confluences 
-        }, { merge: true }); // merge: true prevents wiping other potential user data
-        
-        console.log("Data locked in the cloud.");
-    } catch (error) {
-        console.error("Cloud save failed:", error);
-    }
-}
-
-async function loadUserData() {
-    if(!activeUser) return;
-    try {
-        const userRef = window.doc(window.db, "users", activeUser.email);
-        const docSnap = await window.getDoc(userRef);
-
-        if (docSnap.exists()) {
-            // Data found in the cloud! Load it into the app.
-            const data = docSnap.data();
-            tradeLogs = data.tradeLogs || [];
-            confluences = data.confluences || [];
-        } else {
-            // First time user, no data yet.
-            tradeLogs = [];
-            confluences = [];
+            if(!activeUser) return;
+            try {
+                const userRef = window.doc(window.db, "users", activeUser.email);
+                await window.setDoc(userRef, { 
+                    tradeLogs: tradeLogs, 
+                    confluences: confluences 
+                }, { merge: true });
+                console.log("Data synced to Firestore.");
+            } catch (error) {
+                console.error("Cloud save failed:", error);
+            }
         }
-        
-        renderChecklists();
-        calculateStats();
-    } catch (error) {
-        console.error("Failed to load cloud data:", error);
-        alert("Could not load your history. Check your connection.");
-    }
-}
-        
-        renderChecklists();
-        calculateStats();
-    } catch (error) {
-        console.error("Failed to load cloud data:", error);
-        alert("Could not load your history. Check your connection.");
-    }
-}
+
+        async function loadUserData() {
+            if(!activeUser) return;
+            try {
+                const userRef = window.doc(window.db, "users", activeUser.email);
+                const docSnap = await window.getDoc(userRef);
+
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    tradeLogs = data.tradeLogs || [];
+                    confluences = data.confluences || [];
+                } else {
+                    tradeLogs = [];
+                    confluences = [];
+                }
+                
+                renderChecklists();
+                calculateStats();
+            } catch (error) {
+                console.error("Failed to load cloud data:", error);
+                alert("Could not load your history. Check your connection.");
+            }
+        }
 
         function logout() {
             localStorage.removeItem('tl_active_session');
             location.reload();
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            const session = localStorage.getItem('tl_active_session');
-            if(session) {
-                activeUser = { email: session, username: session.split('@')[0] };
-                loadUserData();
-                showScreen('main-app');
-            } else {
-                showScreen('landing-screen');
-            }
+        // Wait for window objects to load, then initialize
+        window.addEventListener('load', async () => {
+            // Slight delay to ensure module script finishes binding Firebase to window
+            setTimeout(async () => {
+                const session = localStorage.getItem('tl_active_session');
+                if(session) {
+                    activeUser = { email: session, username: session.split('@')[0] };
+                    await loadUserData();
+                    showScreen('main-app');
+                } else {
+                    showScreen('landing-screen');
+                }
+            }, 100);
         });
     </script>
 </body>
