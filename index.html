@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     
     <script type="module">
-    // --- FIREBASE BOOTSTRAP ---
+    // --- 1. FIREBASE SETUP ---
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, updateProfile, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
     import { getFirestore, doc, setDoc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
@@ -20,24 +20,82 @@
     messagingSenderId: "234232295731",
     appId: "1:234232295731:web:94f9f601c93b806b0bce46"
   };
-        
+
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // Make tools globally available for our buttons
-    window.auth = auth; window.db = db; window.doc = doc; window.setDoc = setDoc; window.getDoc = getDoc;
-    window.createUserWithEmailAndPassword = createUserWithEmailAndPassword;
-    window.signInWithEmailAndPassword = signInWithEmailAndPassword;
-    window.updateProfile = updateProfile;
-
-    // --- APP STATE ---
+    // --- 2. GLOBAL STATE ---
     let activeUser = null;
     let tradeLogs = [];
     let confluences = [];
     let currentCalendarDate = new Date();
 
-    // --- AUTH FUNCTIONS ---
+    // --- 3. THE "BLANK SCREEN" PREVENTER (Navigation) ---
+    window.showScreen = function(id) {
+        const screens = ['landing-screen', 'auth-signup', 'auth-login', 'main-app'];
+        screens.forEach(s => {
+            const el = document.getElementById(s);
+            if(el) el.classList.add('hidden');
+        });
+        const target = document.getElementById(id);
+        if(target) target.classList.remove('hidden');
+    };
+
+    window.switchTab = function(id) {
+        ['info', 'home', 'journal', 'calendar', 'rules'].forEach(t => {
+            const view = document.getElementById(`view-${t}`);
+            const tab = document.getElementById(`tab-${t}`);
+            if(view) view.classList.add('hidden');
+            if(tab) tab.className = 'tab-inactive pb-3 text-sm cursor-pointer';
+        });
+        const activeView = document.getElementById(`view-${id}`);
+        const activeTab = document.getElementById(`tab-${id}`);
+        if(activeView) activeView.classList.remove('hidden');
+        if(activeTab) activeTab.className = 'tab-active pb-3 text-sm cursor-pointer';
+        if (id === 'calendar') window.renderCalendar();
+    };
+
+    // --- 4. CLOUD DATA ENGINE ---
+    async function saveToCloud() {
+        if(!activeUser) return;
+        try {
+            await setDoc(doc(db, "users", activeUser.email), {
+                username: activeUser.username,
+                tradeLogs: tradeLogs,
+                confluences: confluences
+            }, { merge: true });
+        } catch (e) { console.error("Cloud Save Error:", e); }
+    }
+
+    async function loadUserData() {
+        if(!activeUser) return;
+        try {
+            const docSnap = await getDoc(doc(db, "users", activeUser.email));
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                tradeLogs = data.tradeLogs || [];
+                confluences = data.confluences || [];
+                if(data.username) activeUser.username = data.username;
+            }
+            document.getElementById('user-display').innerText = `@${activeUser.username}`;
+            renderChecklists();
+            calculateStats();
+        } catch (e) { console.error("Load Error:", e); }
+    }
+
+    // --- 5. USERNAME & AUTH ---
+    window.updateUsername = async function() {
+        const newName = prompt("Enter your new username:");
+        if (newName && newName.trim().length > 1) {
+            activeUser.username = newName.trim();
+            document.getElementById('user-display').innerText = `@${activeUser.username}`;
+            await updateProfile(auth.currentUser, { displayName: activeUser.username });
+            await saveToCloud();
+            alert("Username updated!");
+        }
+    };
+
     window.handleSignup = async function(e) {
         e.preventDefault();
         const username = document.getElementById('reg-username').value.trim();
@@ -46,53 +104,13 @@
         try {
             const userCred = await createUserWithEmailAndPassword(auth, email, password);
             await updateProfile(userCred.user, { displayName: username });
-            
-            // Force save username to Firestore immediately
-            await setDoc(doc(db, "users", email), { 
-                username: username, 
-                tradeLogs: [], 
-                confluences: [] 
-            });
-
             activeUser = { email, username };
+            await saveToCloud();
             localStorage.setItem('tl_active_session', email);
             location.reload();
         } catch (err) { alert(err.message); }
     };
 
-        window.updateUsername = async function() {
-    const newName = prompt("Enter your new username:");
-    
-    // 1. Validation: Don't allow empty or tiny names
-    if (!newName || newName.trim().length < 2) {
-        alert("Username too short or cancelled.");
-        return;
-    }
-
-    const cleanName = newName.trim();
-
-    try {
-        // 2. Update the local app memory
-        activeUser.username = cleanName;
-
-        // 3. Update the UI immediately
-        document.getElementById('user-display').innerText = `@${cleanName}`;
-
-        // 4. Update the Firebase Auth Profile (for the login session)
-        await window.updateProfile(window.auth.currentUser, { 
-            displayName: cleanName 
-        });
-
-        // 5. Update the Firestore Database (for the permanent record)
-        await saveToCloud();
-
-        alert("Username updated successfully!");
-    } catch (err) {
-        console.error("Update failed:", err);
-        alert("Error updating name. Check the console.");
-    }
-};
-        
     window.handleLogin = async function(e) {
         e.preventDefault();
         const email = document.getElementById('login-email').value.trim().toLowerCase();
@@ -100,39 +118,16 @@
         try {
             await signInWithEmailAndPassword(auth, email, password);
             localStorage.setItem('tl_active_session', email);
-            location.reload(); 
+            location.reload();
         } catch (err) { alert(err.message); }
     };
 
-    // --- DATA LOADING ---
-    async function loadUserData() {
-        if(!activeUser) return;
-        try {
-            const userRef = doc(db, "users", activeUser.email);
-            const docSnap = await getDoc(userRef);
-            if (docSnap.exists()) {
-                const data = docSnap.data();
-                tradeLogs = data.tradeLogs || [];
-                confluences = data.confluences || [];
-                // FIXED: Prioritize the username from the database
-                if(data.username) activeUser.username = data.username;
-            }
-            document.getElementById('user-display').innerText = `@${activeUser.username}`;
-            renderChecklists();
-            calculateStats();
-        } catch (error) { console.error("Load error:", error); }
-    }
+    window.logout = function() {
+        localStorage.removeItem('tl_active_session');
+        signOut(auth).then(() => location.reload());
+    };
 
-    async function saveToCloud() {
-        if(!activeUser) return;
-        await setDoc(doc(db, "users", activeUser.email), {
-            username: activeUser.username,
-            tradeLogs: tradeLogs,
-            confluences: confluences
-        }, { merge: true });
-    }
-
-    // --- CORE LOGIC ---
+    // --- 6. TRADES & CALENDAR ---
     window.saveTradeEntry = async function(e) {
         e.preventDefault();
         const trade = {
@@ -162,14 +157,17 @@
         const total = tradeLogs.length;
         const wins = tradeLogs.filter(t => t.outcome === 'WIN').length;
         const net = tradeLogs.reduce((sum, t) => sum + t.pnl, 0);
-        document.getElementById('stat-winrate').innerText = total ? Math.round((wins/total)*100) + '%' : '0%';
-        document.getElementById('stat-pnl').innerText = `$${net.toFixed(2)}`;
+        const wrEl = document.getElementById('stat-winrate');
+        const pnlEl = document.getElementById('stat-pnl');
+        if(wrEl) wrEl.innerText = total ? Math.round((wins/total)*100) + '%' : '0%';
+        if(pnlEl) pnlEl.innerText = `$${net.toFixed(2)}`;
         renderHistory();
     }
 
     function renderHistory() {
         const container = document.getElementById('history-container');
-        container.innerHTML = [...tradeLogs].reverse().map(t => `
+        if(!container) return;
+        container.innerHTML = [...tradeLogs].sort((a,b) => b.id - a.id).map(t => `
             <div class="bg-white p-4 rounded-xl border flex justify-between items-center shadow-sm mb-2">
                 <div>
                     <span class="font-black text-slate-900">${t.asset}</span> 
@@ -178,7 +176,7 @@
                 <div class="flex items-center gap-4">
                     <span class="text-[10px] font-black px-2 py-1 rounded bg-slate-100">${t.grade}</span>
                     <span class="font-bold ${t.pnl >= 0 ? 'text-emerald-600' : 'text-red-600'}">${t.pnl >= 0 ? '+' : ''}$${t.pnl}</span>
-                    <button onclick="deleteTrade(${t.id})" class="text-slate-300 hover:text-red-500 font-bold ml-2">×</button>
+                    <button onclick="deleteTrade(${t.id})" class="text-slate-300 hover:text-red-500 font-bold ml-2 text-lg">×</button>
                 </div>
             </div>
         `).join('');
@@ -187,6 +185,7 @@
     window.renderCalendar = function() {
         const grid = document.getElementById('calendar-grid-content');
         const label = document.getElementById('calendar-month-label');
+        if(!grid) return;
         grid.innerHTML = '';
         const year = currentCalendarDate.getFullYear();
         const month = currentCalendarDate.getMonth();
@@ -202,64 +201,22 @@
             const dayPnL = dayTrades.reduce((s, t) => s + t.pnl, 0);
             let color = 'bg-white';
             if(dayTrades.length > 0) color = dayPnL >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200';
-            
-            grid.innerHTML += `
-                <div class="h-20 border rounded-lg p-1 ${color} flex flex-col justify-between">
-                    <span class="text-[10px] font-bold text-slate-400">${d}</span>
-                    ${dayTrades.length ? `
-                        <div class="text-center">
-                            <div class="text-[9px] font-black text-slate-500">${dayTrades.length} Tr.</div>
-                            <div class="text-[10px] font-black ${dayPnL >= 0 ? 'text-emerald-600' : 'text-red-600'}">${dayPnL >= 0 ? '+' : ''}${Math.round(dayPnL)}</div>
-                        </div>
-                    ` : ''}
-                </div>
-            `;
+            grid.innerHTML += `<div class="h-16 border rounded p-1 ${color} flex flex-col justify-between">
+                <span class="text-[9px] font-bold text-slate-400">${d}</span>
+                ${dayTrades.length ? `<div class="text-center font-black text-[9px] ${dayPnL >= 0 ? 'text-emerald-600' : 'text-red-600'}">${dayPnL >= 0 ? '+' : ''}${Math.round(dayPnL)}</div>` : ''}
+            </div>`;
         }
     };
-
-    // --- NAVIGATION ---
-    window.showScreen = function(id) {
-        ['landing-screen', 'auth-signup', 'auth-login', 'main-app'].forEach(s => {
-            const el = document.getElementById(s);
-            if(el) el.classList.add('hidden');
-        });
-        document.getElementById(id).classList.remove('hidden');
-    };
-
-    window.switchTab = function(id) {
-        ['info', 'home', 'journal', 'calendar', 'rules'].forEach(t => {
-            document.getElementById(`view-${t}`).classList.add('hidden');
-            document.getElementById(`tab-${t}`).className = 'tab-inactive pb-3 text-sm cursor-pointer';
-        });
-        document.getElementById(`view-${id}`).classList.remove('hidden');
-        document.getElementById(`tab-${id}`).className = 'tab-active pb-3 text-sm cursor-pointer';
-        if (id === 'calendar') window.renderCalendar();
-    };
-
-    window.logout = function() {
-        localStorage.removeItem('tl_active_session');
-        signOut(auth).then(() => location.reload());
-    };
-
-    // --- BOOTSTRAP ---
-    onAuthStateChanged(auth, async (user) => {
-        if (user) {
-            activeUser = { email: user.email, username: user.displayName || user.email.split('@')[0] };
-            await loadUserData();
-            window.showScreen('main-app');
-        } else {
-            window.showScreen('landing-screen');
-        }
-    });
 
     window.changeMonth = (dir) => {
         currentCalendarDate.setMonth(currentCalendarDate.getMonth() + dir);
         window.renderCalendar();
     };
 
+    // --- 7. CHECKLISTS ---
     window.addConfluence = () => {
         const input = document.getElementById('new-conf');
-        if(input.value.trim()) {
+        if(input && input.value.trim()) {
             confluences.push(input.value.trim());
             input.value = '';
             saveToCloud();
@@ -282,10 +239,22 @@
         const checks = document.querySelectorAll('.conf-check');
         const checked = Array.from(checks).filter(c => c.checked).length;
         const ratio = checks.length ? checked / checks.length : 0;
-        let g = 'F';
-        if(ratio === 1) g = 'A++'; else if(ratio >= 0.8) g = 'A'; else if(ratio >= 0.6) g = 'B'; else if(ratio >= 0.4) g = 'C';
-        document.getElementById('grade-badge').innerText = g;
+        let g = '-';
+        if(ratio === 1) g = 'A++'; else if(ratio >= 0.8) g = 'A'; else if(ratio >= 0.6) g = 'B'; else if(ratio >= 0.4) g = 'C'; else if(ratio > 0) g = 'D';
+        const badge = document.getElementById('grade-badge');
+        if(badge) badge.innerText = g;
     };
+
+    // --- 8. INITIALIZE ---
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            activeUser = { email: user.email, username: user.displayName || user.email.split('@')[0] };
+            await loadUserData();
+            window.showScreen('main-app');
+        } else {
+            window.showScreen('landing-screen');
+        }
+    });
 </script>
 </body>
 </html>
