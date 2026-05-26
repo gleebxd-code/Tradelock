@@ -7,33 +7,46 @@
     <script src="https://cdn.tailwindcss.com"></script>
     
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { 
-            getAuth, 
-            createUserWithEmailAndPassword, 
-            signInWithEmailAndPassword, 
-            updateProfile, 
-            updatePassword 
-        } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { 
+        getAuth, 
+        createUserWithEmailAndPassword, 
+        signInWithEmailAndPassword, 
+        updateProfile, 
+        updatePassword 
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    
+    // NEW: Import Firestore
+    import { 
+        getFirestore, 
+        doc, 
+        setDoc, 
+        getDoc 
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyAdGlJEWkygcJtU0o4bl_s2wkDyzbUGEQA",
+    const firebaseConfig = {
+        apiKey: "AIzaSyAdGlJEWkygcJtU0o4bl_s2wkDyzbUGEQA",
     authDomain: "tradinglock-e8a93.firebaseapp.com",
     projectId: "tradinglock-e8a93",
     storageBucket: "tradinglock-e8a93.firebasestorage.app",
     messagingSenderId: "234232295731",
     appId: "1:234232295731:web:94f9f601c93b806b0bce46"
-        };
+  };
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app); // NEW: Initialize Database
 
-        window.auth = auth;
-        window.createUserWithEmailAndPassword = createUserWithEmailAndPassword;
-        window.signInWithEmailAndPassword = signInWithEmailAndPassword;
-        window.updateProfile = updateProfile;
-        window.updatePassword = updatePassword;
-    </script>
+    window.auth = auth;
+    window.db = db;
+    window.createUserWithEmailAndPassword = createUserWithEmailAndPassword;
+    window.signInWithEmailAndPassword = signInWithEmailAndPassword;
+    window.updateProfile = updateProfile;
+    window.updatePassword = updatePassword;
+    window.doc = doc;
+    window.setDoc = setDoc;
+    window.getDoc = getDoc;
+</script>
 
     <style>
         .tab-active { border-bottom: 2px solid #059669; color: #059669; font-weight: bold; }
@@ -247,14 +260,13 @@
     </div>
 
     <script>
-        // --- DATA & STATE ---
+
         let dbUsers = JSON.parse(localStorage.getItem('tl_global_users')) || [];
         let activeUser = null;
         let tradeLogs = [];
         let confluences = [];
         let currentCalendarDate = new Date();
 
-        // --- AUTH LOGIC (FIREBASE) ---
         async function handleSignup(e) {
             e.preventDefault();
             const username = document.getElementById('reg-username').value.trim();
@@ -440,18 +452,56 @@
             a.click();
         }
 
-        function saveUserData() {
-            if(!activeUser) return;
-            localStorage.setItem(`data_${activeUser.email}`, JSON.stringify({ tradeLogs, confluences }));
-        }
+        async function saveUserData() {
+    if(!activeUser) return;
+    try {
+        // Find the specific document for this user in the "users" collection
+        const userRef = window.doc(window.db, "users", activeUser.email);
+        
+        // Push the arrays to the cloud
+        await window.setDoc(userRef, { 
+            tradeLogs: tradeLogs, 
+            confluences: confluences 
+        }, { merge: true }); // merge: true prevents wiping other potential user data
+        
+        console.log("Data locked in the cloud.");
+    } catch (error) {
+        console.error("Cloud save failed:", error);
+    }
+}
 
-        function loadUserData() {
-            const data = JSON.parse(localStorage.getItem(`data_${activeUser.email}`)) || { tradeLogs: [], confluences: [] };
-            tradeLogs = data.tradeLogs;
-            confluences = data.confluences;
-            renderChecklists();
-            calculateStats();
+async function loadUserData() {
+    if(!activeUser) return;
+    try {
+        const userRef = window.doc(window.db, "users", activeUser.email);
+        const docSnap = await window.getDoc(userRef);
+
+        if (docSnap.exists()) {
+            // Data found in the cloud! Load it into the app.
+            const data = docSnap.data();
+            tradeLogs = data.tradeLogs || [];
+            confluences = data.confluences || [];
+        } else {
+            // First time user, no data yet.
+            tradeLogs = [];
+            confluences = [];
         }
+        
+        renderChecklists();
+        calculateStats();
+    } catch (error) {
+        console.error("Failed to load cloud data:", error);
+        alert("Could not load your history. Check your connection.");
+    }
+}
+        
+        renderChecklists();
+        calculateStats();
+    } catch (error) {
+        console.error("Failed to load cloud data:", error);
+        alert("Could not load your history. Check your connection.");
+    }
+}
 
         function logout() {
             localStorage.removeItem('tl_active_session');
