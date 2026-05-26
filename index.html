@@ -260,253 +260,241 @@
 
     <script>
         // --- DATA & STATE ---
-        let activeUser = null;
-        let tradeLogs = [];
-        let confluences = [];
-        let currentCalendarDate = new Date();
+let activeUser = null;
+let tradeLogs = [];
+let confluences = [];
+let currentCalendarDate = new Date();
 
-        // --- AUTH LOGIC (FIREBASE) ---
-        async function handleSignup(e) {
-            e.preventDefault();
-            const username = document.getElementById('reg-username').value.trim();
-            const email = document.getElementById('reg-email').value.trim().toLowerCase();
-            const password = document.getElementById('reg-password').value;
-            try {
-                const userCred = await window.createUserWithEmailAndPassword(window.auth, email, password);
-                await window.updateProfile(userCred.user, { displayName: username });
-                activeUser = { email, username };
-                localStorage.setItem('tl_active_session', email);
-                alert("Account created! Logging you in.");
-                location.reload();
-            } catch (err) { alert(err.message); }
+// --- AUTH LOGIC ---
+async function handleSignup(e) {
+    e.preventDefault();
+    const username = document.getElementById('reg-username').value.trim();
+    const email = document.getElementById('reg-email').value.trim().toLowerCase();
+    const password = document.getElementById('reg-password').value;
+    try {
+        const userCred = await window.createUserWithEmailAndPassword(window.auth, email, password);
+        await window.updateProfile(userCred.user, { displayName: username });
+        activeUser = { email, username };
+        localStorage.setItem('tl_active_session', email);
+        
+        // Save initial cloud profile
+        await saveUserData();
+        
+        alert("Account created! Welcome to the lock.");
+        location.reload();
+    } catch (err) { alert(err.message); }
+}
+
+async function handleLogin(e) {
+    e.preventDefault();
+    const email = document.getElementById('login-email').value.trim().toLowerCase();
+    const password = document.getElementById('login-password').value;
+    try {
+        const userCred = await window.signInWithEmailAndPassword(window.auth, email, password);
+        // We set a temporary name, but loadUserData() will fetch the real one from the cloud
+        activeUser = { email, username: userCred.user.displayName || email.split('@')[0] };
+        localStorage.setItem('tl_active_session', email);
+        await loadUserData();
+        showScreen('main-app');
+    } catch (err) { alert(err.message); }
+}
+
+// --- CLOUD SYNC ---
+async function saveUserData() {
+    if(!activeUser) return;
+    try {
+        const userRef = window.doc(window.db, "users", activeUser.email);
+        await window.setDoc(userRef, { 
+            username: activeUser.username, // FIXED: Saving username to cloud
+            tradeLogs: tradeLogs, 
+            confluences: confluences 
+        }, { merge: true });
+        console.log("Cloud sync successful.");
+    } catch (error) {
+        console.error("Cloud save failed:", error);
+    }
+}
+
+async function loadUserData() {
+    if(!activeUser) return;
+    try {
+        const userRef = window.doc(window.db, "users", activeUser.email);
+        const docSnap = await window.getDoc(userRef);
+
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            tradeLogs = data.tradeLogs || [];
+            confluences = data.confluences || [];
+            if(data.username) activeUser.username = data.username; // FIXED: Loading username from cloud
         }
+        
+        document.getElementById('user-display').innerText = `@${activeUser.username}`;
+        renderChecklists();
+        calculateStats();
+    } catch (error) {
+        console.error("Failed to load cloud data:", error);
+    }
+}
 
-        async function handleLogin(e) {
-            e.preventDefault();
-            const email = document.getElementById('login-email').value.trim().toLowerCase();
-            const password = document.getElementById('login-password').value;
-            try {
-                const userCred = await window.signInWithEmailAndPassword(window.auth, email, password);
-                activeUser = { email, username: userCred.user.displayName || email.split('@')[0] };
-                localStorage.setItem('tl_active_session', email);
-                await loadUserData(); // Now correctly waits for cloud data
-                showScreen('main-app');
-            } catch (err) { alert(err.message); }
-        }
+// --- CORE FUNCTIONS ---
+function deleteTrade(index) {
+    if(confirm("Delete this execution? This cannot be undone.")) {
+        tradeLogs.splice(index, 1);
+        saveUserData();
+        calculateStats();
+    }
+}
 
-        async function handleAccountUpdate(e) {
-            e.preventDefault();
-            const oldPass = document.getElementById('acc-old-pass').value;
-            const newPass = document.getElementById('acc-new-pass').value;
-            const newName = document.getElementById('acc-username').value.trim();
-            try {
-                const userCred = await window.signInWithEmailAndPassword(window.auth, activeUser.email, oldPass);
-                if (newName) await window.updateProfile(userCred.user, { displayName: newName });
-                if (newPass) await window.updatePassword(userCred.user, newPass);
-                alert("Profile updated!");
-                location.reload();
-            } catch (err) { alert("Update failed. Verify your old password."); }
-        }
+async function saveTradeEntry(e) {
+    e.preventDefault();
+    const trade = {
+        date: document.getElementById('trade-date').value,
+        pnl: parseFloat(document.getElementById('trade-pnl').value),
+        outcome: document.getElementById('trade-outcome').value,
+        grade: document.getElementById('grade-badge').innerText,
+        asset: document.getElementById('trade-asset').value.toUpperCase(),
+        timestamp: Date.now() // For sorting
+    };
+    tradeLogs.push(trade);
+    await saveUserData();
+    calculateStats();
+    document.getElementById('trade-form').reset();
+    switchTab('home');
+}
 
-        // --- APP LOGIC ---
-        function showScreen(id) {
-            ['landing-screen', 'auth-signup', 'auth-login', 'main-app'].forEach(s => document.getElementById(s).classList.add('hidden'));
-            document.getElementById(id).classList.remove('hidden');
-            if(id === 'main-app' && activeUser) {
-                document.getElementById('user-display').innerText = `@${activeUser.username}`;
-                document.getElementById('acc-username').value = activeUser.username;
-                calculateStats();
-            }
-        }
+function renderHistory() {
+    const container = document.getElementById('history-container');
+    // We reverse the array to show newest first, but keep track of the original index
+    container.innerHTML = tradeLogs.map((t, originalIndex) => ({...t, originalIndex})).reverse().map(t => `
+        <div class="bg-white p-4 rounded-xl border flex justify-between items-center shadow-sm">
+            <div>
+                <span class="font-black text-slate-900">${t.asset}</span> 
+                <span class="text-[10px] text-slate-400 ml-2 uppercase font-bold">${t.date}</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <span class="text-[10px] font-black px-2 py-1 rounded bg-slate-100 text-slate-600">${t.grade}</span>
+                <span class="font-bold ${t.pnl >= 0 ? 'text-emerald-600' : 'text-red-600'}">${t.pnl >= 0 ? '+' : ''}$${t.pnl}</span>
+                <button onclick="deleteTrade(${t.originalIndex})" class="text-slate-300 hover:text-red-500 transition-colors ml-2 text-lg">×</button>
+            </div>
+        </div>
+    `).join('');
+}
 
-        function switchTab(id) {
-            ['info', 'home', 'journal', 'calendar', 'rules'].forEach(t => {
-                document.getElementById(`view-${t}`).classList.add('hidden');
-                document.getElementById(`tab-${t}`).className = 'tab-inactive pb-3 text-sm';
-            });
-            document.getElementById(`view-${id}`).classList.remove('hidden');
-            document.getElementById(`tab-${id}`).className = 'tab-active pb-3 text-sm';
-            if (id === 'calendar') renderCalendar();
-        }
+function renderCalendar() {
+    const grid = document.getElementById('calendar-grid-content');
+    const label = document.getElementById('calendar-month-label');
+    grid.innerHTML = '';
+    const year = currentCalendarDate.getFullYear();
+    const month = currentCalendarDate.getMonth();
+    label.innerText = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(currentCalendarDate);
+    
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-        function toggleEdit(id) {
-            const el = document.getElementById(id);
-            el.readOnly = !el.readOnly;
-            el.classList.toggle('bg-white');
-            if(!el.readOnly) el.focus();
-        }
-
-        function addConfluenceItem() {
-            const input = document.getElementById('new-confluence-input');
-            if(!input.value) return;
-            confluences.push(input.value);
-            input.value = '';
-            renderChecklists();
-            saveUserData();
-        }
-
-        function renderChecklists() {
-            const config = document.getElementById('config-checklist');
-            const active = document.getElementById('active-checklist');
-            config.innerHTML = ''; active.innerHTML = '';
-            confluences.forEach((c, idx) => {
-                config.innerHTML += `<div class="flex justify-between text-xs bg-slate-50 p-1 rounded"><span>${c}</span><button type="button" onclick="confluences.splice(${idx},1);renderChecklists();saveUserData();" class="text-red-500">×</button></div>`;
-                active.innerHTML += `<label class="flex items-center gap-1"><input type="checkbox" onchange="updateGrade()" class="conf-check"> ${c}</label>`;
-            });
-        }
-
-        function updateGrade() {
-            const checks = document.querySelectorAll('.conf-check');
-            const checked = Array.from(checks).filter(c => c.checked).length;
-            const ratio = checked / checks.length;
-            let grade = 'F';
-            if(ratio === 1) grade = 'A++';
-            else if(ratio >= 0.8) grade = 'A';
-            else if(ratio >= 0.6) grade = 'B';
-            else if(ratio >= 0.4) grade = 'C';
-            document.getElementById('grade-badge').innerText = grade;
-        }
-
-        async function saveTradeEntry(e) {
-            e.preventDefault();
-            const trade = {
-                date: document.getElementById('trade-date').value,
-                pnl: parseFloat(document.getElementById('trade-pnl').value),
-                outcome: document.getElementById('trade-outcome').value,
-                grade: document.getElementById('grade-badge').innerText,
-                asset: document.getElementById('trade-asset').value.toUpperCase()
-            };
-            tradeLogs.push(trade);
-            await saveUserData();
-            calculateStats();
-            document.getElementById('trade-form').reset();
-            alert("Execution Locked to Cloud.");
-            switchTab('home');
-        }
-
-        function calculateStats() {
-            const total = tradeLogs.length;
-            const wins = tradeLogs.filter(t => t.outcome === 'WIN').length;
-            const net = tradeLogs.reduce((sum, t) => sum + t.pnl, 0);
-            document.getElementById('stat-winrate').innerText = total ? Math.round((wins/total)*100) + '%' : '0%';
-            document.getElementById('stat-pnl').innerText = `$${net.toFixed(2)}`;
-            renderHistory();
-        }
-
-        function renderHistory() {
-            const container = document.getElementById('history-container');
-            container.innerHTML = tradeLogs.slice().reverse().map(t => `
-                <div class="bg-white p-4 rounded-xl border flex justify-between items-center shadow-sm">
-                    <div><span class="font-black">${t.asset}</span> <span class="text-xs text-slate-400 ml-2">${t.date}</span></div>
-                    <div class="flex items-center gap-4">
-                        <span class="text-xs font-bold px-2 py-1 rounded ${t.grade.startsWith('A') ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}">${t.grade}</span>
-                        <span class="font-bold ${t.pnl >= 0 ? 'text-emerald-600' : 'text-red-600'}">${t.pnl >= 0 ? '+' : ''}$${t.pnl}</span>
+    for(let i=0; i<firstDay; i++) grid.innerHTML += '<div></div>';
+    for(let d=1; d<=daysInMonth; d++) {
+        const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const dayTrades = tradeLogs.filter(t => t.date === dateStr);
+        const dayPnL = dayTrades.reduce((s, t) => s + t.pnl, 0);
+        let color = 'bg-white';
+        if(dayTrades.length > 0) color = dayPnL >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200';
+        
+        // FIXED: Now showing count of trades and PnL
+        grid.innerHTML += `
+            <div class="h-20 border rounded-lg p-1 ${color} flex flex-col justify-between transition-all hover:shadow-md">
+                <span class="text-[10px] font-bold text-slate-400">${d}</span>
+                ${dayTrades.length ? `
+                    <div class="text-center">
+                        <div class="text-[9px] font-black text-slate-500">${dayTrades.length} ${dayTrades.length === 1 ? 'Trade' : 'Trades'}</div>
+                        <div class="text-[10px] font-black ${dayPnL >= 0 ? 'text-emerald-600' : 'text-red-600'}">${dayPnL >= 0 ? '+' : ''}${Math.round(dayPnL)}</div>
                     </div>
-                </div>
-            `).join('');
+                ` : ''}
+            </div>
+        `;
+    }
+}
+
+// --- UI HELPERS ---
+function showScreen(id) {
+    ['landing-screen', 'auth-signup', 'auth-login', 'main-app'].forEach(s => document.getElementById(s).classList.add('hidden'));
+    document.getElementById(id).classList.remove('hidden');
+    if(id === 'main-app' && activeUser) {
+        document.getElementById('user-display').innerText = `@${activeUser.username}`;
+        calculateStats();
+    }
+}
+
+function switchTab(id) {
+    ['info', 'home', 'journal', 'calendar', 'rules'].forEach(t => {
+        document.getElementById(`view-${t}`).classList.add('hidden');
+        document.getElementById(`tab-${t}`).className = 'tab-inactive pb-3 text-sm';
+    });
+    document.getElementById(`view-${id}`).classList.remove('hidden');
+    document.getElementById(`tab-${id}`).className = 'tab-active pb-3 text-sm';
+    if (id === 'calendar') renderCalendar();
+}
+
+function calculateStats() {
+    const total = tradeLogs.length;
+    const wins = tradeLogs.filter(t => t.outcome === 'WIN').length;
+    const net = tradeLogs.reduce((sum, t) => sum + t.pnl, 0);
+    document.getElementById('stat-winrate').innerText = total ? Math.round((wins/total)*100) + '%' : '0%';
+    document.getElementById('stat-pnl').innerText = `$${net.toFixed(2)}`;
+    renderHistory();
+}
+
+function toggleEdit(id) {
+    const el = document.getElementById(id);
+    el.readOnly = !el.readOnly;
+    el.classList.toggle('bg-white');
+    if(!el.readOnly) el.focus();
+}
+
+function renderChecklists() {
+    const config = document.getElementById('config-checklist');
+    const active = document.getElementById('active-checklist');
+    config.innerHTML = ''; active.innerHTML = '';
+    confluences.forEach((c, idx) => {
+        config.innerHTML += `<div class="flex justify-between text-[10px] bg-slate-50 p-1 rounded border border-slate-100"><span>${c}</span><button type="button" onclick="confluences.splice(${idx},1);renderChecklists();saveUserData();" class="text-red-500 font-bold ml-2">×</button></div>`;
+        active.innerHTML += `<label class="flex items-center gap-2 cursor-pointer hover:bg-slate-100 p-1 rounded transition-colors"><input type="checkbox" onchange="updateGrade()" class="conf-check w-3 h-3 rounded text-emerald-600"> ${c}</label>`;
+    });
+}
+
+function updateGrade() {
+    const checks = document.querySelectorAll('.conf-check');
+    if(checks.length === 0) { document.getElementById('grade-badge').innerText = '-'; return; }
+    const checked = Array.from(checks).filter(c => c.checked).length;
+    const ratio = checked / checks.length;
+    let grade = 'F';
+    if(ratio === 1) grade = 'A++';
+    else if(ratio >= 0.8) grade = 'A';
+    else if(ratio >= 0.6) grade = 'B';
+    else if(ratio >= 0.4) grade = 'C';
+    document.getElementById('grade-badge').innerText = grade;
+}
+
+function changeMonth(dir) {
+    currentCalendarDate.setMonth(currentCalendarDate.getMonth() + dir);
+    renderCalendar();
+}
+
+function logout() {
+    localStorage.removeItem('tl_active_session');
+    location.reload();
+}
+
+window.addEventListener('load', () => {
+    setTimeout(async () => {
+        const session = localStorage.getItem('tl_active_session');
+        if(session) {
+            activeUser = { email: session, username: session.split('@')[0] };
+            await loadUserData();
+            showScreen('main-app');
+        } else {
+            showScreen('landing-screen');
         }
-
-        function renderCalendar() {
-            const grid = document.getElementById('calendar-grid-content');
-            const label = document.getElementById('calendar-month-label');
-            grid.innerHTML = '';
-            const year = currentCalendarDate.getFullYear();
-            const month = currentCalendarDate.getMonth();
-            label.innerText = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(currentCalendarDate);
-            
-            const firstDay = new Date(year, month, 1).getDay();
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-            for(let i=0; i<firstDay; i++) grid.innerHTML += '<div></div>';
-            for(let d=1; d<=daysInMonth; d++) {
-                const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-                const dayTrades = tradeLogs.filter(t => t.date === dateStr);
-                const dayPnL = dayTrades.reduce((s, t) => s + t.pnl, 0);
-                let color = 'bg-white';
-                if(dayTrades.length > 0) color = dayPnL >= 0 ? 'bg-emerald-100 border-emerald-200' : 'bg-red-100 border-red-200';
-                
-                grid.innerHTML += `
-                    <div class="h-16 border rounded p-1 ${color} flex flex-col justify-between">
-                        <span class="text-[10px] font-bold text-slate-400">${d}</span>
-                        ${dayTrades.length ? `<span class="text-[10px] font-black">${dayPnL >= 0 ? '+' : ''}${Math.round(dayPnL)}</span>` : ''}
-                    </div>
-                `;
-            }
-        }
-
-        function changeMonth(dir) {
-            currentCalendarDate.setMonth(currentCalendarDate.getMonth() + dir);
-            renderCalendar();
-        }
-
-        function exportCSV() {
-            let csv = "Date,Asset,Outcome,PnL,Grade\n";
-            tradeLogs.forEach(t => csv += `${t.date},${t.asset},${t.outcome},${t.pnl},${t.grade}\n`);
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.setAttribute('href', url);
-            a.setAttribute('download', 'tradinglock_export.csv');
-            a.click();
-        }
-
-        // --- FIRESTORE CLOUD SAVING ---
-        async function saveUserData() {
-            if(!activeUser) return;
-            try {
-                const userRef = window.doc(window.db, "users", activeUser.email);
-                await window.setDoc(userRef, { 
-                    tradeLogs: tradeLogs, 
-                    confluences: confluences 
-                }, { merge: true });
-                console.log("Data synced to Firestore.");
-            } catch (error) {
-                console.error("Cloud save failed:", error);
-            }
-        }
-
-        async function loadUserData() {
-            if(!activeUser) return;
-            try {
-                const userRef = window.doc(window.db, "users", activeUser.email);
-                const docSnap = await window.getDoc(userRef);
-
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    tradeLogs = data.tradeLogs || [];
-                    confluences = data.confluences || [];
-                } else {
-                    tradeLogs = [];
-                    confluences = [];
-                }
-                
-                renderChecklists();
-                calculateStats();
-            } catch (error) {
-                console.error("Failed to load cloud data:", error);
-                alert("Could not load your history. Check your connection.");
-            }
-        }
-
-        function logout() {
-            localStorage.removeItem('tl_active_session');
-            location.reload();
-        }
-
-        // Wait for window objects to load, then initialize
-        window.addEventListener('load', async () => {
-            // Slight delay to ensure module script finishes binding Firebase to window
-            setTimeout(async () => {
-                const session = localStorage.getItem('tl_active_session');
-                if(session) {
-                    activeUser = { email: session, username: session.split('@')[0] };
-                    await loadUserData();
-                    showScreen('main-app');
-                } else {
-                    showScreen('landing-screen');
-                }
-            }, 100);
-        });
+    }, 200);
+});
     </script>
 </body>
 </html>
