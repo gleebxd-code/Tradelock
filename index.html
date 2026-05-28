@@ -328,6 +328,19 @@
             } catch (err) { alert(err.message); }
         };
 
+        window.handleForgotPassword = async function() {
+            const email = document.getElementById('login-email').value.trim().toLowerCase();
+            if(!email) {
+                return alert("Please type your email in the Email box first, then click Forgot Password.");
+            }
+            try {
+                await sendPasswordResetEmail(auth, email);
+                alert("If an account exists, a password reset email has been sent! Check your inbox.");
+            } catch (err) { 
+                alert(err.message); 
+            }
+        };
+        
         window.logout = function() {
             signOut(auth).then(() => location.reload());
         };
