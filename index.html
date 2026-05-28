@@ -328,6 +328,7 @@
             } catch (err) { alert(err.message); }
         };
 
+        
         window.handleForgotPassword = async function() {
             const email = document.getElementById('login-email').value.trim().toLowerCase();
             if(!email) {
@@ -340,6 +341,7 @@
                 alert(err.message); 
             }
         };
+
         
         window.logout = function() {
             signOut(auth).then(() => location.reload());
