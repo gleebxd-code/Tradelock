@@ -174,7 +174,14 @@
                                 <div id="active-checklist" class="grid grid-cols-2 gap-2 bg-slate-50 p-2 rounded border text-xs min-h-[40px]"></div>
                             </div>
                         </div>
+                        
                         <textarea id="trade-context" placeholder="Context (Why did you take this trade?)..." class="w-full p-2 border rounded-md text-sm h-20 bg-slate-50" required></textarea>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <textarea id="trade-correct" placeholder="What did you do right? (E.g. Followed plan, waited for confirmation...)" class="w-full p-2 border rounded-md text-sm h-20 bg-emerald-50 focus:outline-emerald-500"></textarea>
+                            <textarea id="trade-mistakes" placeholder="What were your mistakes? (E.g. FOMO, oversized, exited early...)" class="w-full p-2 border rounded-md text-sm h-20 bg-red-50 focus:outline-red-500"></textarea>
+                        </div>
+
                         <button type="submit" class="w-full bg-slate-900 text-white font-black py-4 rounded-lg hover:bg-slate-800">LOCK EXECUTION</button>
                     </form>
                 </div>
@@ -394,6 +401,8 @@
                 pnl: parseFloat(document.getElementById('trade-pnl').value),
                 grade: document.getElementById('grade-badge').innerText,
                 context: document.getElementById('trade-context').value,
+                correct: document.getElementById('trade-correct').value,     // ADDED
+                mistakes: document.getElementById('trade-mistakes').value,   // ADDED
                 id: Date.now()
             };
 
@@ -419,9 +428,13 @@
 
         window.exportCSV = function() {
             if(!tradeLogs.length) return alert("No trades to export!");
-            let csv = "Date,Time,Asset,Direction,R:R,Outcome,PnL,Grade\n";
+            // Updated Headers to include Correct and Mistakes
+            let csv = "Date,Time,Asset,Direction,R:R,Outcome,PnL,Grade,Correct,Mistakes\n";
             tradeLogs.forEach(t => {
-                csv += `${t.date},${t.time || ''},${t.asset},${t.direction || ''},${t.rr || ''},${t.outcome},${t.pnl},${t.grade}\n`;
+                // Ensure text areas with potential commas or quotes don't break the CSV
+                const safeCorrect = (t.correct || "").replace(/"/g, '""');
+                const safeMistakes = (t.mistakes || "").replace(/"/g, '""');
+                csv += `${t.date},${t.time || ''},${t.asset},${t.direction || ''},${t.rr || ''},${t.outcome},${t.pnl},${t.grade},"${safeCorrect}","${safeMistakes}"\n`;
             });
             const blob = new Blob([csv], { type: 'text/csv' });
             const url = window.URL.createObjectURL(blob);
@@ -550,16 +563,6 @@
             badge.innerText = g;
         };
 
-        // --- INITIALIZE LISTENER ---
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                activeUser = { email: user.email, username: user.displayName || user.email.split('@')[0] };
-                await loadUserData();
-                window.showScreen('main-app');
-            } else {
-                window.showScreen('landing-screen');
-            }
-        });
     </script>
 </body>
 </html>
