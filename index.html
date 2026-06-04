@@ -136,7 +136,6 @@
                                 </select>
                             </div>
                         </div>
-                        <button onclick="exportCSV()" class="bg-slate-900 text-white text-xs font-bold px-4 py-2 rounded hover:bg-slate-700">Export CSV</button>
                     </div>
                 </div>
 
@@ -423,28 +422,6 @@
             }
         };
 
-        window.exportCSV = function() {
-            if(!tradeLogs.length) return alert("No trades to export!");
-            
-            
-            let csv = "Date,Time,Asset,Direction,R:R,Outcome,PnL,Grade,Correct,Mistakes\n";
-            
-            tradeLogs.forEach(t => {
-        
-                const safeCorrect = (t.correct || "").replace(/"/g, '""');
-                const safeMistakes = (t.mistakes || "").replace(/"/g, '""');
-                
-             
-                csv += `${t.date},${t.time || ''},${t.asset},${t.direction || ''},${t.rr || ''},${t.outcome},${t.pnl},${t.grade},"${safeCorrect}","${safeMistakes}"\n`;
-            });
-            
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `Tradinglock_Export_${new Date().toISOString().split('T')[0]}.csv`;
-            a.click();
-        };
 
         function calculateStats() {
             const total = tradeLogs.length;
