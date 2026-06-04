@@ -173,6 +173,10 @@
                                 <div id="active-checklist" class="grid grid-cols-2 gap-2 bg-slate-50 p-2 rounded border text-xs min-h-[40px]"></div>
                             </div>
                         </div>
+                        <div>
+    <label class="text-xs font-bold text-slate-500 block mb-1">Trade Screenshot / Chart Link</label>
+    <input type="url" id="trade-screenshot" placeholder="e.g., https://www.tradingview.com/x/..." class="w-full p-2 border rounded-md text-sm bg-slate-50 focus:outline-slate-400">
+</div>
                         <textarea id="trade-context" placeholder="Context (Why did you take this trade?)..." class="w-full p-2 border rounded-md text-sm h-20 bg-slate-50" required></textarea>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
     <textarea id="trade-correct" placeholder="What did you do right? (E.g. Followed plan, waited for confirmation...)" class="w-full p-2 border rounded-md text-sm h-20 bg-emerald-50 focus:outline-emerald-500"></textarea>
@@ -399,6 +403,7 @@
                 context: document.getElementById('trade-context').value,
                 correct: document.getElementById('trade-correct').value,     
                 mistakes: document.getElementById('trade-mistakes').value,   
+                screenshot: document.getElementById('trade-screenshot').value, // <-- ADD THIS LINE
                 id: Date.now()
             };
 
@@ -407,6 +412,9 @@
             calculateStats();
             document.getElementById('trade-form').reset();
             document.getElementById('grade-badge').innerText = '-';
+            
+            // <-- ADD THIS LINE to clear the screenshot box for the next trade
+            document.getElementById('trade-screenshot').value = ''; 
             
             // Uncheck all active checklist items visually
             document.querySelectorAll('.conf-check').forEach(cb => cb.checked = false);
