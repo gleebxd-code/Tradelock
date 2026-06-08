@@ -173,10 +173,6 @@
                                 <div id="active-checklist" class="grid grid-cols-2 gap-2 bg-slate-50 p-2 rounded border text-xs min-h-[40px]"></div>
                             </div>
                         </div>
-                        <div>
-                            <label class="text-xs font-bold text-slate-500 block mb-1">Trade Screenshot (Image File)</label>
-                            <input type="file" id="trade-screenshot" accept="image/*" class="w-full p-2 border rounded-md text-sm bg-slate-50 focus:outline-slate-400">
-                        </div>
                         <textarea id="trade-context" placeholder="Context (Why did you take this trade?)..." class="w-full p-2 border rounded-md text-sm h-20 bg-slate-50" required></textarea>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
     <textarea id="trade-correct" placeholder="What did you do right? (E.g. Followed plan, waited for confirmation...)" class="w-full p-2 border rounded-md text-sm h-20 bg-emerald-50 focus:outline-emerald-500"></textarea>
@@ -236,7 +232,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, updateProfile, signOut, updatePassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
         // Real config restored here!
         const firebaseConfig = {
@@ -251,7 +246,6 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const storage = getStorage(app);
 
         let activeUser = null;
         let tradeLogs = [];
@@ -392,33 +386,7 @@
         window.saveTradeEntry = async function(e) {
             if(e) e.preventDefault();
             
-            // Change button text so you know it's uploading
-            const submitBtn = e.target.querySelector('button[type="submit"]');
-            submitBtn.innerText = "UPLOADING IMAGE & SAVING...";
-            submitBtn.disabled = true;
-
-            let screenshotUrl = "";
-            const fileInput = document.getElementById('trade-screenshot');
-            
-            // Check if an image was selected
-            if(fileInput.files.length > 0) {
-                const file = fileInput.files[0];
-                // Create a unique name for the image
-                const storageRef = ref(storage, `screenshots/${activeUser.username}_${Date.now()}_${file.name}`);
-                
-                try {
-                    // Upload to Firebase Storage
-                    const snapshot = await uploadBytes(storageRef, file);
-                    // Get the viewable URL
-                    screenshotUrl = await getDownloadURL(snapshot);
-                } catch(err) {
-                    alert("Error uploading image: " + err.message);
-                    submitBtn.innerText = "LOCK EXECUTION";
-                    submitBtn.disabled = false;
-                    return;
-                }
-            }
-
+            // Collects all data from the form
             const trade = {
                 date: document.getElementById('trade-date').value,
                 time: document.getElementById('trade-time').value,
@@ -431,7 +399,6 @@
                 context: document.getElementById('trade-context').value,
                 correct: document.getElementById('trade-correct').value,     
                 mistakes: document.getElementById('trade-mistakes').value,   
-                screenshot: screenshotUrl, // Saves the Firebase Storage URL automatically
                 id: Date.now()
             };
 
@@ -440,12 +407,10 @@
             calculateStats();
             document.getElementById('trade-form').reset();
             document.getElementById('grade-badge').innerText = '-';
-            document.getElementById('trade-screenshot').value = ''; 
             
+            // Uncheck all active checklist items visually
             document.querySelectorAll('.conf-check').forEach(cb => cb.checked = false);
             
-            submitBtn.innerText = "LOCK EXECUTION";
-            submitBtn.disabled = false;
             window.switchTab('home');
         };
 
@@ -473,48 +438,19 @@
         function renderHistory() {
             const container = document.getElementById('history-container');
             if(!container) return;
-            
             container.innerHTML = [...tradeLogs].sort((a,b) => b.id - a.id).map(t => `
-                <div class="bg-white p-5 rounded-xl border flex flex-col shadow-sm mb-4">
-                    <!-- Top Row: Basic Stats -->
-                    <div class="flex justify-between items-center mb-4">
-                        <div>
-                            <span class="font-black text-slate-900 text-lg">${t.asset}</span> 
-                            <span class="text-[10px] text-slate-400 ml-2 font-bold">${t.date} ${t.time ? '| ' + t.time : ''}</span>
-                        </div>
-                        <div class="flex items-center gap-4">
-                            <span class="text-xs font-black px-2 py-1 rounded bg-slate-100">${t.grade}</span>
-                            <span class="font-bold ${t.pnl >= 0 ? 'text-emerald-600' : 'text-red-600'}">${t.pnl >= 0 ? '+' : ''}$${t.pnl}</span>
-                            <button onclick="deleteTrade(${t.id})" class="text-slate-300 hover:text-red-500 font-bold ml-3 text-xl">×</button>
-                        </div>
+                <div class="bg-white p-4 rounded-xl border flex justify-between items-center shadow-sm mb-2">
+                    <div>
+                        <span class="font-black text-slate-900">${t.asset}</span> 
+                        <span class="text-[10px] text-slate-400 ml-2 font-bold">${t.date} ${t.time ? '| ' + t.time : ''}</span>
                     </div>
-                    
-                    <!-- Bottom Row: Your Journal Reflections -->
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-slate-100 pt-4">
-                        <div class="bg-slate-50 p-3 rounded-lg border border-slate-100">
-                            <span class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Context</span>
-                            <p class="text-xs text-slate-700 whitespace-pre-wrap">${t.context || 'No context logged.'}</p>
-                        </div>
-                        <div class="bg-emerald-50 p-3 rounded-lg border border-emerald-100">
-                            <span class="block text-[10px] font-bold text-emerald-600 uppercase mb-1">Did Right</span>
-                            <p class="text-xs text-emerald-800 whitespace-pre-wrap">${t.correct || 'Nothing logged.'}</p>
-                        </div>
-                        <div class="bg-red-50 p-3 rounded-lg border border-red-100">
-                            <span class="block text-[10px] font-bold text-red-600 uppercase mb-1">Mistakes</span>
-                            <p class="text-xs text-red-800 whitespace-pre-wrap">${t.mistakes || 'Nothing logged.'}</p>
-                        </div>
+                    <div class="flex items-center gap-4">
+                        <span class="text-[10px] font-black px-2 py-1 rounded bg-slate-100">${t.grade}</span>
+                        <span class="font-bold ${t.pnl >= 0 ? 'text-emerald-600' : 'text-red-600'}">${t.pnl >= 0 ? '+' : ''}$${t.pnl}</span>
+                        <button onclick="deleteTrade(${t.id})" class="text-slate-300 hover:text-red-500 font-bold ml-2 text-lg">×</button>
                     </div>
-                    ${t.screenshot ? `
-                        <div class="mt-4 pt-4 border-t border-slate-100">
-                            <span class="block text-[10px] font-bold text-slate-400 uppercase mb-2">Trade Screenshot</span>
-                            <a href="${t.screenshot}" target="_blank">
-                                <img src="${t.screenshot}" alt="Trade Setup" class="rounded-lg border border-slate-200 w-full max-h-96 object-contain hover:opacity-90 transition-opacity">
-                            </a>
-                        </div>
-                    ` : ''}
-
                 </div>
-            `).join('');    
+            `).join('');
         }
 
         // --- CALENDAR ---
